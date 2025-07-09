@@ -75,7 +75,7 @@
     color: "#1f78b4"
   });
 function estiloNDVI(feature) {
-  const clase = feature.properties.clase;
+  const Clase = feature.properties.Clase;
 
   const colores = {
     "Muy Bajo": "#d73027",
@@ -86,7 +86,7 @@ function estiloNDVI(feature) {
   };
 
   return {
-    color: colores[clase] || "#cccccc",
+    color: colores[Clase] || "#cccccc",
     weight: 1,
     fillOpacity: 0.6
   };
@@ -94,7 +94,7 @@ function estiloNDVI(feature) {
   cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", estiloNDVI);
 
   function estiloNDVI(feature) {
-  const clase = feature.properties.clase;
+  const Clase = feature.properties.Clase;
 
   const colores = {
     "Muy Bajo": "#d73027",
@@ -105,7 +105,7 @@ function estiloNDVI(feature) {
   };
 
   return {
-    color: colores[clase] || "#cccccc",
+    color: colores[Clase] || "#cccccc",
     weight: 1,
     fillOpacity: 0.6
   };
