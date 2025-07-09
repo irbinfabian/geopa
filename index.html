@@ -74,14 +74,43 @@
   cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
     color: "#1f78b4"
   });
+function estiloNDVI(feature) {
+  const clase = feature.properties.clase;
 
-  cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", {
-    color: "#33a02c"
-  });
+  const colores = {
+    "Muy Bajo": "#d73027",
+    "Bajo": "#fc8d59",
+    "Medio": "#fee08b",
+    "Alto": "#d9ef8b",
+    "Muy Alto": "#1a9850"
+  };
 
-  cargarGeojson("NDVI 2024", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2024_08.geojson", {
-    color: "#e31a1c"
-  });
+  return {
+    color: colores[clase] || "#cccccc",
+    weight: 1,
+    fillOpacity: 0.6
+  };
+}
+  cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", estiloNDVI);
+
+  function estiloNDVI(feature) {
+  const clase = feature.properties.clase;
+
+  const colores = {
+    "Muy Bajo": "#d73027",
+    "Bajo": "#fc8d59",
+    "Medio": "#fee08b",
+    "Alto": "#d9ef8b",
+    "Muy Alto": "#1a9850"
+  };
+
+  return {
+    color: colores[clase] || "#cccccc",
+    weight: 1,
+    fillOpacity: 0.6
+  };
+}
+  cargarGeojson("NDVI 2024", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2024_08.geojson", estiloNDVI);
 
   cargarGeojson("Sector", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//Poblados.geojson", {
     color: "#ff7f00"
