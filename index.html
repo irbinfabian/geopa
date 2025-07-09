@@ -1,70 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+  <meta charset="UTF-8" />
   <title>Geoportal Interactivo</title>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 100vh; }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
-  <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    // Crear el mapa
-    var map = L.map('map').setView([-1.5, -78.5], 7); // Ajusta según tu zona
+<div id="map"></div>
 
-    // Fondo base (OSM)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    // Añadir capas WMS de GeoServer
-    var geoserverUrl = 'http://localhost:8080/geoserver/wms'; // Cambia a tu IP/puerto
+<script>
+  // Crear el mapa centrado en Ecuador (ajusta según tu zona de interés)
+  var map = L.map('map').setView([-1.5, -78.5], 7);
 
-    var AOI = L.tileLayer.wms(geoserverUrl, {
-      layers: 'workspace:AOI',
-      format: 'image/png',
-      transparent: true,
-      attribution: 'AOI'
-    }).addTo(map);
+  // Capa base: OpenStreetMap
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
 
-    var NDVI_2020 = L.tileLayer.wms(geoserverUrl, {
-      layers: 'workspace:NDVI_2020_02',
-      format: 'image/png',
-      transparent: true,
-      attribution: 'NDVI 2020'
-    });
+  // Definir un objeto para las capas
+  var overlayLayers = {};
 
-    var NDVI_2024 = L.tileLayer.wms(geoserverUrl, {
-      layers: 'workspace:NDVI_2024_08',
-      format: 'image/png',
-      transparent: true,
-      attribution: 'NDVI 2024'
-    });
+  // Función para cargar cada capa GeoJSON
+  function cargarGeojson(nombre, url, estilo) {
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        const capa = L.geoJSON(data, {
+          style: estilo,
+          pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, {
+              radius: 6,
+              fillColor: estilo.color || "blue",
+              color: "#000",
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.7
+            });
+          },
+          onEachFeature: function (feature, layer) {
+            // Mostrar popup con atributos
+            let popup = "<strong>" + nombre + "</strong><br>";
+            for (const key in feature.properties) {
+              popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
+            }
+            layer.bindPopup(popup);
+          }
+        }).addTo(map);
 
-    var Sector = L.tileLayer.wms(geoserverUrl, {
-      layers: 'workspace:Sector',
-      format: 'image/png',
-      transparent: true,
-      attribution: 'Sector'
-    });
+        overlayLayers[nombre] = capa;
+        controlCapas.addOverlay(capa, nombre);
+      })
+      .catch(error => console.error("Error al cargar " + nombre, error));
+  }
 
-    // Control de capas
-    var baseMaps = {
-      "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-    };
+  // Crear control de capas
+  const controlCapas = L.control.layers(null, overlayLayers).addTo(map);
 
-    var overlayMaps = {
-      "AOI": AOI,
-      "NDVI 2020": NDVI_2020,
-      "NDVI 2024": NDVI_2024,
-      "Sector": Sector
-    };
+  // Cargar tus 4 capas
+  cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
+    color: "#1f78b4"
+  });
 
-    L.control.layers(baseMaps, overlayMaps).addTo(map);
-  </script>
+  cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", {
+    color: "#33a02c"
+  });
+
+  cargarGeojson("NDVI 2024", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2024_08.geojson", {
+    color: "#e31a1c"
+  });
+
+  cargarGeojson("Sector", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//Poblados.geojson", {
+    color: "#ff7f00"
+  });
+</script>
+
 </body>
 </html>
