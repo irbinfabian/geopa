@@ -59,7 +59,7 @@
       "Vegetación muy escasa o seca": "#fee08b",
       "Vegetación moderada o pastizales": "#d9ef8b",
       "Vegetación abundante": "#1a9850",
-      "Vegetación muy densa y saludable": "#004529" // ajusta este nombre/color si es otro
+      "Vegetación muy densa y saludable": "#004529"
     };
     return {
       color: colores[clase] || "#cccccc",
@@ -68,39 +68,41 @@
     };
   }
 
-  // Cargar archivos GeoJSON
- function cargarGeojson(nombre, url, estilo) {
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      const capa = L.geoJSON(data, {
-        style: typeof estilo === 'function' ? estilo : () => estilo,
-        pointToLayer: function (feature, latlng) {
-          return L.circleMarker(latlng, {
-            radius: 6,
-            fillColor: estilo.color || "blue",
-            color: "#000",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.7
-          });
-        },
-        onEachFeature: function (feature, layer) {
-          let popup = "<strong>" + nombre + "</strong><br>";
-          for (const key in feature.properties) {
-            popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
+  // Función para cargar capas GeoJSON
+  function cargarGeojson(nombre, url, estilo) {
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        const capa = L.geoJSON(data, {
+          style: typeof estilo === 'function' ? estilo : () => estilo,
+          pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, {
+              radius: 6,
+              fillColor: estilo.color || "blue",
+              color: "#000",
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.7
+            });
+          },
+          onEachFeature: function (feature, layer) {
+            let popup = "<strong>" + nombre + "</strong><br>";
+            for (const key in feature.properties) {
+              popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
+            }
+            layer.bindPopup(popup);
           }
-          layer.bindPopup(popup);
-        }
-      }).addTo(map);
+        }).addTo(map);
 
-      overlayLayers[nombre] = capa;
-      controlCapas.addOverlay(capa, nombre);
-    })
-    .catch(error => console.error("Error al cargar " + nombre, error));
-}
+        overlayLayers[nombre] = capa;
+        controlCapas.addOverlay(capa, nombre);
+      })
+      .catch(error => console.error("Error al cargar " + nombre, error));
+  }
 
-  // 🔁 REEMPLAZA estas URLs por las reales de Supabase Storage
+  const controlCapas = L.control.layers(null, overlayLayers).addTo(map);
+
+  // Reemplaza las URLs por las reales de tus archivos GeoJSON en Supabase
   cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
     color: "#1f78b4"
   });
@@ -118,7 +120,14 @@
 
   legend.onAdd = function (map) {
     var div = L.DomUtil.create('div', 'info legend');
-    var clases = ["Agua, sombra, suelos saturados", "Suelo desnudo, áreas sin vegetación", "Vegetación muy escasa o seca", "Vegetación moderada o pastizales", "Vegetación abundante", "Vegetación muy densa y saludable"];
+    var clases = [
+      "Agua, sombra, suelos saturados",
+      "Suelo desnudo, áreas sin vegetación",
+      "Vegetación muy escasa o seca",
+      "Vegetación moderada o pastizales",
+      "Vegetación abundante",
+      "Vegetación muy densa y saludable"
+    ];
     var colores = {
       "Agua, sombra, suelos saturados": "#d73027",
       "Suelo desnudo, áreas sin vegetación": "#fc8d59",
