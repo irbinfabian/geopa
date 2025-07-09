@@ -54,12 +54,12 @@
   function estiloNDVI(feature) {
     const clase = feature.properties.CLASE;
     const colores = {
-      "Muy Bajo": "#d73027",
-      "Bajo": "#fc8d59",
-      "Medio": "#fee08b",
-      "Alto": "#d9ef8b",
-      "Muy Alto": "#1a9850",
-      "Extremo Alto": "#004529" // ajusta este nombre/color si es otro
+      "Agua, sombra, suelos saturados": "#d73027",
+      "Suelo desnudo, áreas sin vegetación": "#fc8d59",
+      "Vegetación muy escasa o seca": "#fee08b",
+      "Vegetación moderada o pastizales": "#d9ef8b",
+      "Vegetación abundante": "#1a9850",
+      "Vegetación muy densa y saludable": "#004529" // ajusta este nombre/color si es otro
     };
     return {
       color: colores[clase] || "#cccccc",
@@ -120,14 +120,14 @@
 
   legend.onAdd = function (map) {
     var div = L.DomUtil.create('div', 'info legend');
-    var clases = ["Muy Bajo", "Bajo", "Medio", "Alto", "Muy Alto", "Extremo Alto"];
+    var clases = ["Agua, sombra, suelos saturados", "Suelo desnudo, áreas sin vegetación", "Vegetación muy escasa o seca", "Vegetación moderada o pastizales", "Vegetación abundante", "Vegetación muy densa y saludable"];
     var colores = {
-      "Muy Bajo": "#d73027",
-      "Bajo": "#fc8d59",
-      "Medio": "#fee08b",
-      "Alto": "#d9ef8b",
-      "Muy Alto": "#1a9850",
-      "Extremo Alto": "#004529"
+      "Agua, sombra, suelos saturados": "#d73027",
+      "Suelo desnudo, áreas sin vegetación": "#fc8d59",
+      "Vegetación muy escasa o seca": "#fee08b",
+      "Vegetación moderada o pastizales": "#d9ef8b",
+      "Vegetación abundante": "#1a9850",
+      "Vegetación muy densa y saludable": "#004529"
     };
 
     div.innerHTML += "<h4>NDVI - Clase</h4>";
