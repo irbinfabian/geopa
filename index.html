@@ -69,38 +69,36 @@
   }
 
   // Cargar archivos GeoJSON
-  function cargarGeojson(nombre, url, estilo) {
-    fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        const capa = L.geoJSON(data, {
-          style: estilo,
-          pointToLayer: function (feature, latlng) {
-            return L.circleMarker(latlng, {
-              radius: 6,
-              fillColor: estilo.color || "blue",
-              color: "#000",
-              weight: 1,
-              opacity: 1,
-              fillOpacity: 0.7
-            });
-          },
-          onEachFeature: function (feature, layer) {
-            let popup = "<strong>" + nombre + "</strong><br>";
-            for (const key in feature.properties) {
-              popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
-            }
-            layer.bindPopup(popup);
+ function cargarGeojson(nombre, url, estilo) {
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      const capa = L.geoJSON(data, {
+        style: typeof estilo === 'function' ? estilo : () => estilo,
+        pointToLayer: function (feature, latlng) {
+          return L.circleMarker(latlng, {
+            radius: 6,
+            fillColor: estilo.color || "blue",
+            color: "#000",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.7
+          });
+        },
+        onEachFeature: function (feature, layer) {
+          let popup = "<strong>" + nombre + "</strong><br>";
+          for (const key in feature.properties) {
+            popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
           }
-        }).addTo(map);
+          layer.bindPopup(popup);
+        }
+      }).addTo(map);
 
-        overlayLayers[nombre] = capa;
-        controlCapas.addOverlay(capa, nombre);
-      })
-      .catch(error => console.error("Error al cargar " + nombre, error));
-  }
-
-  const controlCapas = L.control.layers(null, overlayLayers).addTo(map);
+      overlayLayers[nombre] = capa;
+      controlCapas.addOverlay(capa, nombre);
+    })
+    .catch(error => console.error("Error al cargar " + nombre, error));
+}
 
   // 🔁 REEMPLAZA estas URLs por las reales de Supabase Storage
   cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
