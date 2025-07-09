@@ -1,83 +1,70 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Geoportal - Trabajo Final de Titulación</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <title>Geoportal Interactivo</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; }
-    header {
-      background: #2e7d32;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
-    #map {
-      height: 90vh;
-      width: 100%;
-    }
-    .controls {
-      padding: 1rem;
-      background: #f1f1f1;
-      text-align: center;
-    }
+    #map { height: 100vh; }
   </style>
 </head>
 <body>
-
-  <header>
-    <h1>Geoportal - Trabajo Final de Titulación</h1>
-    <p>Visualización y carga de capas espaciales (SHP)</p>
-  </header>
-
-  <div class="controls">
-    <label for="shpInput">📂 Cargar archivo SHP (.zip): </label>
-    <input type="file" id="shpInput" accept=".zip">
-  </div>
-
   <div id="map"></div>
 
-  <!-- Leaflet -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- JSZip y shp.js para leer archivos SHP -->
-  <script src="https://unpkg.com/jszip@3.7.1/dist/jszip.min.js"></script>
-  <script src="https://unpkg.com/shpjs@latest/dist/shp.min.js"></script>
-
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([-0.25, -78.52], 7);
+    // Crear el mapa
+    var map = L.map('map').setView([-1.5, -78.5], 7); // Ajusta según tu zona
 
+    // Fondo base (OSM)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    let shpLayer;
+    // Añadir capas WMS de GeoServer
+    var geoserverUrl = 'http://localhost:8080/geoserver/wms'; // Cambia a tu IP/puerto
 
-    document.getElementById('shpInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file || !file.name.endsWith(".zip")) {
-        alert("Por favor selecciona un archivo .zip que contenga un SHP.");
-        return;
-      }
+    var AOI = L.tileLayer.wms(geoserverUrl, {
+      layers: 'workspace:AOI',
+      format: 'image/png',
+      transparent: true,
+      attribution: 'AOI'
+    }).addTo(map);
 
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        shp(evt.target.result).then(geojson => {
-          if (shpLayer) {
-            map.removeLayer(shpLayer);
-          }
-          shpLayer = L.geoJSON(geojson, {
-            style: { color: 'blue', weight: 2 }
-          }).addTo(map);
-          map.fitBounds(shpLayer.getBounds());
-        }).catch(error => {
-          console.error("Error al cargar el SHP:", error);
-          alert("Hubo un problema al cargar el archivo SHP.");
-        });
-      };
-      reader.readAsArrayBuffer(file);
+    var NDVI_2020 = L.tileLayer.wms(geoserverUrl, {
+      layers: 'workspace:NDVI_2020_02',
+      format: 'image/png',
+      transparent: true,
+      attribution: 'NDVI 2020'
     });
-  </script>
 
+    var NDVI_2024 = L.tileLayer.wms(geoserverUrl, {
+      layers: 'workspace:NDVI_2024_08',
+      format: 'image/png',
+      transparent: true,
+      attribution: 'NDVI 2024'
+    });
+
+    var Sector = L.tileLayer.wms(geoserverUrl, {
+      layers: 'workspace:Sector',
+      format: 'image/png',
+      transparent: true,
+      attribution: 'Sector'
+    });
+
+    // Control de capas
+    var baseMaps = {
+      "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+    };
+
+    var overlayMaps = {
+      "AOI": AOI,
+      "NDVI 2020": NDVI_2020,
+      "NDVI 2024": NDVI_2024,
+      "Sector": Sector
+    };
+
+    L.control.layers(baseMaps, overlayMaps).addTo(map);
+  </script>
 </body>
 </html>
