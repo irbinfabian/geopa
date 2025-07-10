@@ -2,95 +2,127 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Geoportal Interactivo Avanzado</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geoportal Interactivo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Leaflet Side-by-Side CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-side-by-side@2.1.0/leaflet-side-by-side.css" />
 
-  <!-- Leaflet.draw CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
-
-  <!-- Leaflet-measure CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-measure/3.1.0/leaflet-measure.min.css" />
-
   <style>
-    #map { height: 100vh; width: 100%; }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+
     .info.legend {
-      background: white; padding: 8px; font-size: 14px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px;
+      background: white;
+      padding: 8px;
+      font-size: 14px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
       line-height: 18px;
     }
+
     .info.legend i {
-      display: inline-block; width: 18px; height: 18px;
-      margin-right: 8px; vertical-align: middle;
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      margin-right: 8px;
+      vertical-align: middle;
     }
+
+    /* CONTROLES ORDENADOS Y RESPONSIVOS */
     #busqueda, #compararNDVI, #exportar, #descargarCSV {
-      position: absolute; right: 10px; z-index: 1000;
-      background: white; padding: 8px;
-      border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      position: absolute;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 8px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      width: 220px;
+      margin-bottom: 12px;
+      /* Evita que se monten */
     }
-    #busqueda { top: 10px; width: 220px; }
-    #compararNDVI { top: 70px; }
-    #exportar { top: 130px; }
-    #descargarCSV { top: 190px; width: 220px; }
+    #busqueda { top: 10px; }
+    #compararNDVI { top: 80px; }
+    #exportar { top: 150px; }
+    #descargarCSV { top: 220px; }
+
     #busqueda input {
-      width: 100%; padding: 4px;
+      width: 100%;
+      padding: 4px;
+      box-sizing: border-box;
     }
-    #busqueda button, #compararNDVI button, #exportar button, #descargarCSV button {
-      width: 100%; padding: 6px 12px; font-weight: bold; cursor: pointer;
-      margin-top: 4px;
+
+    #busqueda button, 
+    #compararNDVI button, 
+    #exportar button, 
+    #descargarCSV button {
+      width: 100%;
+      padding: 6px 12px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 6px;
+      box-sizing: border-box;
     }
+
+    /* Responsivo para pantallas pequeñas */
     @media (max-width: 600px) {
       #busqueda, #compararNDVI, #exportar, #descargarCSV {
-        top: auto; bottom: 10px; left: 10px; right: 10px;
-        width: auto; margin-bottom: 5px;
+        position: static;
+        width: auto;
+        margin: 5px 10px;
+        box-shadow: none;
       }
       #busqueda input {
-        width: 100%; margin-bottom: 5px;
+        width: 100%;
       }
-      #busqueda button, #compararNDVI button, #exportar button, #descargarCSV button {
-        width: 100%; display: block;
+      #busqueda button, 
+      #compararNDVI button, 
+      #exportar button, 
+      #descargarCSV button {
+        width: 100%;
+        margin-top: 6px;
       }
     }
   </style>
 </head>
 <body>
 
+<!-- Controles -->
 <div id="busqueda">
   <input type="text" id="inputSector" placeholder="Buscar Sector..." onkeypress="if(event.key==='Enter'){buscarSector();}" />
-  <button onclick="buscarSector()">Buscar Sector</button>
+  <button onclick="buscarSector()">Buscar</button>
 </div>
 
 <div id="compararNDVI">
-  <button onclick="alternarComparacion()">Comparar NDVI 2020 vs 2024</button>
+  <button onclick="toggleCompararNDVI()">Activar comparación NDVI</button>
 </div>
 
 <div id="exportar">
-  <button onclick="exportarMapaPNG()">Exportar Mapa PNG</button>
-  <button onclick="exportarMapaPDF()">Exportar Mapa PDF</button>
+  <button onclick="exportarMapa()">Exportar Mapa (PNG)</button>
 </div>
 
 <div id="descargarCSV">
-  <button onclick="descargarCSV()">Descargar Atributos Sector CSV</button>
+  <button onclick="descargarCSV()">Descargar atributos CSV</button>
 </div>
 
 <div id="map"></div>
 
-<!-- Scripts -->
+<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Leaflet Side-by-Side JS -->
 <script src="https://unpkg.com/leaflet-side-by-side@2.1.0/leaflet-side-by-side.min.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-measure/3.1.0/leaflet-measure.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- leaflet-image para exportar mapa como PNG -->
+<script src="https://rawgit.com/mapbox/leaflet-image/gh-pages/leaflet-image.js"></script>
 
 <script>
-  const { jsPDF } = window.jspdf;
-
   var map = L.map('map').setView([-1.5, -78.5], 7);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -98,13 +130,11 @@
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
-  L.control.scale({ imperial: false }).addTo(map);
-
   var overlayLayers = {};
   var capaSector = null;
   var capaNDVI2020 = null;
   var capaNDVI2024 = null;
-  var comparador = null;
+  var sideBySideControl = null;
 
   function estiloNDVI(feature) {
     const clase = (feature.properties.CLASE || "").trim();
@@ -124,7 +154,7 @@
   }
 
   function cargarGeojson(nombre, url, estilo) {
-    return fetch(url)
+    fetch(url)
       .then(response => response.json())
       .then(data => {
         const capa = L.geoJSON(data, {
@@ -140,12 +170,22 @@
             });
           },
           onEachFeature: function (feature, layer) {
-            let tabla = "<table border='1' cellpadding='4'><thead><tr><th colspan='2'>" + nombre + "</th></tr></thead><tbody>";
+            let popup = "<strong>" + nombre + "</strong><br>";
             for (const key in feature.properties) {
-              tabla += `<tr><td><b>${key}</b></td><td>${feature.properties[key]}</td></tr>`;
+              popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
             }
-            tabla += "</tbody></table>";
-            layer.bindPopup(tabla);
+            layer.bindPopup(popup);
+
+            // Tabla de atributos al hacer clic (mostrar tabla en popup)
+            layer.on('click', function () {
+              let tabla = '<table border="1" style="border-collapse:collapse; width:100%;">';
+              tabla += '<thead><tr><th>Atributo</th><th>Valor</th></tr></thead><tbody>';
+              for (const key in feature.properties) {
+                tabla += `<tr><td>${key}</td><td>${feature.properties[key]}</td></tr>`;
+              }
+              tabla += '</tbody></table>';
+              layer.bindPopup(tabla).openPopup();
+            });
           }
         }).addTo(map);
 
@@ -155,49 +195,55 @@
         if (nombre === "Sector") capaSector = capa;
         if (nombre === "NDVI 2020") capaNDVI2020 = capa;
         if (nombre === "NDVI 2024") capaNDVI2024 = capa;
-
-        return capa;
       })
       .catch(error => console.error("Error al cargar " + nombre, error));
   }
 
   const controlCapas = L.control.layers(null, overlayLayers).addTo(map);
 
-  // Cargar capas y guardar promesas para sincronizar
-  Promise.all([
-    cargarGeojson("Sector", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//Poblados.geojson", {
-      color: "#ff7f00"
-    }),
-    cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
-      color: "#1f78b4"
-    }),
-    cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", estiloNDVI),
-    cargarGeojson("NDVI 2024", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2024_08.geojson", estiloNDVI)
-  ]).then(() => {
-    // Todas capas cargadas
-    console.log("Capas cargadas");
+  // Cargar capas
+  cargarGeojson("Sector", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//Poblados.geojson", {
+    color: "#ff7f00"
   });
+  cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
+    color: "#1f78b4"
+  });
+  cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", estiloNDVI);
+  cargarGeojson("NDVI 2024", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2024_08.geojson", estiloNDVI);
 
-  function alternarComparacion() {
-    if (!capaNDVI2020 || !capaNDVI2024) {
-      alert("Las capas aún no se han cargado.");
-      return;
-    }
-    if (comparador) {
-      map.removeControl(comparador);
-      comparador = null;
-      alert("Comparación desactivada.");
+  // Esperar a que se carguen las capas para activar sideBySide
+  function esperarComparacion() {
+    if (capaNDVI2020 && capaNDVI2024) {
+      // NO activamos automáticamente para que el usuario decida con botón
+      // sideBySideControl = L.control.sideBySide(capaNDVI2020, capaNDVI2024).addTo(map);
     } else {
-      comparador = L.control.sideBySide(capaNDVI2020, capaNDVI2024).addTo(map);
+      setTimeout(esperarComparacion, 500);
+    }
+  }
+  esperarComparacion();
+
+  // Función para activar/desactivar comparación
+  function toggleCompararNDVI() {
+    if (sideBySideControl) {
+      map.removeControl(sideBySideControl);
+      sideBySideControl = null;
+      this.textContent = "Activar comparación NDVI";
+    } else if (capaNDVI2020 && capaNDVI2024) {
+      sideBySideControl = L.control.sideBySide(capaNDVI2020, capaNDVI2024).addTo(map);
+      document.querySelector("#compararNDVI button").textContent = "Desactivar comparación NDVI";
+    } else {
+      alert("Las capas NDVI aún no han cargado.");
     }
   }
 
+  // Buscar sector
   function buscarSector() {
     const texto = document.getElementById("inputSector").value.trim().toLowerCase();
     if (!texto || !capaSector) {
       alert("Ingrese un nombre de sector válido.");
       return;
     }
+
     let encontrado = false;
     capaSector.eachLayer(function (layer) {
       const nombre = (layer.feature.properties.name || "").toLowerCase();
@@ -207,146 +253,55 @@
         encontrado = true;
       }
     });
-    if (!encontrado) alert("No se encontró ningún sector con ese nombre.");
+
+    if (!encontrado) {
+      alert("No se encontró ningún sector con ese nombre.");
+    }
   }
 
-  // Exportar mapa a PNG
-  function exportarMapaPNG() {
-    html2canvas(document.getElementById('map')).then(canvas => {
-      const enlace = document.createElement('a');
-      enlace.download = 'mapa.png';
-      enlace.href = canvas.toDataURL();
-      enlace.click();
-    });
-  }
-
-  // Exportar mapa a PDF
-  function exportarMapaPDF() {
-    html2canvas(document.getElementById('map')).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-      });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save('mapa.pdf');
+  // Exportar mapa como PNG usando leaflet-image
+  function exportarMapa() {
+    leafletImage(map, function(err, canvas) {
+      if (err) {
+        alert("Error al generar la imagen.");
+        return;
+      }
+      var img = canvas.toDataURL("image/png");
+      var link = document.createElement('a');
+      link.href = img;
+      link.download = "mapa.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     });
   }
 
   // Descargar atributos de capa Sector como CSV
   function descargarCSV() {
     if (!capaSector) {
-      alert("La capa Sector no está cargada aún.");
+      alert("La capa Sector aún no ha cargado.");
       return;
     }
-    const features = capaSector.toGeoJSON().features;
-    if (!features.length) {
-      alert("No hay datos para descargar.");
-      return;
-    }
-
-    // Obtener todas las claves de propiedades únicas
-    const keysSet = new Set();
-    features.forEach(f => {
-      Object.keys(f.properties).forEach(k => keysSet.add(k));
-    });
-    const keys = Array.from(keysSet);
-
-    // Construir CSV
-    let csv = keys.join(",") + "\n";
-    features.forEach(f => {
-      let row = keys.map(k => {
-        let val = f.properties[k];
-        if (val === null || val === undefined) val = "";
-        else if (typeof val === "string") {
-          // Escapar comillas
-          val = '"' + val.replace(/"/g, '""') + '"';
-        }
-        return val;
-      }).join(",");
-      csv += row + "\n";
+    let csv = "Nombre,Atributos\n";
+    capaSector.eachLayer(function(layer) {
+      const props = layer.feature.properties;
+      let row = (props.name || "") + ",";
+      // Puedes agregar más propiedades si quieres en el CSV
+      // Aquí simplemente concatena las propiedades separadas por ;
+      let atributos = Object.entries(props).map(([k,v]) => `${k}:${v}`).join(";");
+      row += `"${atributos}"\n`;
+      csv += row;
     });
 
-    // Descargar CSV
-    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'atributos_sector.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    var blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "atributos_sector.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
-
-  // Leaflet.draw - agregar controles de dibujo
-  var drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
-
-  var drawControl = new L.Control.Draw({
-    position: 'topleft',
-    draw: {
-      polygon: true,
-      polyline: true,
-      rectangle: true,
-      circle: true,
-      marker: true,
-      circlemarker: false
-    },
-    edit: {
-      featureGroup: drawnItems,
-      remove: true
-    }
-  });
-  map.addControl(drawControl);
-
-  map.on(L.Draw.Event.CREATED, function (event) {
-    var layer = event.layer;
-    drawnItems.addLayer(layer);
-    layer.bindPopup("Objeto dibujado. Puede editarlo o eliminarlo.");
-  });
-
-  // Leaflet-measure para medir distancias y áreas
-  L.control.measure({
-    position: 'topleft',
-    primaryLengthUnit: 'meters',
-    secondaryLengthUnit: 'kilometers',
-    primaryAreaUnit: 'sqmeters',
-    secondaryAreaUnit: 'hectares'
-  }).addTo(map);
-
-  // Leyenda
-  var legend = L.control({ position: 'bottomright' });
-  legend.onAdd = function (map) {
-    var div = L.DomUtil.create('div', 'info legend');
-    var clases = [
-      "Agua, sombra, suelos saturados",
-      "Suelo desnudo, áreas sin vegetación",
-      "Vegetación muy escasa o seca",
-      "Vegetación moderada o pastizales",
-      "Vegetación abundante",
-      "Vegetación muy densa y saludable"
-    ];
-    var colores = {
-      "Agua, sombra, suelos saturados": "#d73027",
-      "Suelo desnudo, áreas sin vegetación": "#fc8d59",
-      "Vegetación muy escasa o seca": "#fee08b",
-      "Vegetación moderada o pastizales": "#d9ef8b",
-      "Vegetación abundante": "#1a9850",
-      "Vegetación muy densa y saludable": "#004529"
-    };
-    div.innerHTML += "<h4>NDVI - Clase</h4>";
-    for (var i = 0; i < clases.length; i++) {
-      div.innerHTML +=
-        '<i style="background:' + colores[clases[i]] + '"></i> ' +
-        clases[i] + '<br>';
-    }
-    return div;
-  };
-  legend.addTo(map);
 </script>
 
 </body>
 </html>
-
-
-
