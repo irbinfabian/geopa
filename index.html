@@ -186,7 +186,7 @@
 
     let encontrado = false;
     capaSector.eachLayer(function (layer) {
-      const nombre = (layer.feature.properties.name || "").toLowerCase();
+      const nombre = (layer.feature.properties.Name || "").toLowerCase();
       if (nombre.includes(texto)) {
         map.fitBounds(layer.getBounds());
         layer.openPopup();
