@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Geoportal Interactivo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -29,9 +29,35 @@
       margin-right: 8px;
       vertical-align: middle;
     }
+
+    #busqueda {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 8px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    #busqueda input {
+      width: 200px;
+      padding: 4px;
+    }
+
+    #busqueda button {
+      padding: 4px 8px;
+    }
   </style>
 </head>
 <body>
+
+<!-- Buscador -->
+<div id="busqueda">
+  <input type="text" id="inputSector" placeholder="Buscar Sector..." />
+  <button onclick="buscarSector()">Buscar</button>
+</div>
 
 <div id="map"></div>
 
@@ -39,38 +65,33 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-  // Crear el mapa centrado en Ecuador
   var map = L.map('map').setView([-1.5, -78.5], 7);
 
-  // Capa base
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
   var overlayLayers = {};
+  var capaSector = null;  // Guardaremos la capa "Sector" aquí
 
-  // Estilo condicional para capas NDVI usando campo "CLASE"
- function estiloNDVI(feature) {
-  const clase = (feature.properties.CLASE || "").trim();
+  function estiloNDVI(feature) {
+    const clase = (feature.properties.CLASE || "").trim();
+    const colores = {
+      "Agua, sombra, suelos saturados": "#d73027",
+      "Suelo desnudo, áreas sin vegetación": "#fc8d59",
+      "Vegetación muy escasa o seca": "#fee08b",
+      "Vegetación moderada o pastizales": "#d9ef8b",
+      "Vegetación abundante": "#1a9850",
+      "Vegetación muy densa y saludable": "#004529"
+    };
+    return {
+      color: colores[clase] || "#999999",
+      weight: 1,
+      fillOpacity: 0.6
+    };
+  }
 
-  const colores = {
-    "Agua, sombra, suelos saturados": "#d73027",
-    "Suelo desnudo, áreas sin vegetación": "#fc8d59",
-    "Vegetación muy escasa o seca": "#fee08b",
-    "Vegetación moderada o pastizales": "#d9ef8b",
-    "Vegetación abundante": "#1a9850",
-    "Vegetación muy densa y saludable": "#004529"
-  };
-
-  return {
-    color: colores[clase] || "#999999",
-    weight: 1,
-    fillOpacity: 0.6
-  };
-}
-
-  // Función para cargar capas GeoJSON
   function cargarGeojson(nombre, url, estilo) {
     fetch(url)
       .then(response => response.json())
@@ -98,13 +119,17 @@
 
         overlayLayers[nombre] = capa;
         controlCapas.addOverlay(capa, nombre);
+
+        if (nombre === "Sector") {
+          capaSector = capa;
+        }
       })
       .catch(error => console.error("Error al cargar " + nombre, error));
   }
 
   const controlCapas = L.control.layers(null, overlayLayers).addTo(map);
 
-  // Reemplaza las URLs por las reales de tus archivos GeoJSON en Supabase
+  // Cargar las capas
   cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
     color: "#1f78b4"
   });
@@ -117,7 +142,7 @@
     color: "#ff7f00"
   });
 
-  // Leyenda para clases NDVI
+  // Leyenda
   var legend = L.control({ position: 'bottomright' });
 
   legend.onAdd = function (map) {
@@ -150,6 +175,29 @@
   };
 
   legend.addTo(map);
+
+  // Función de búsqueda por nombre del Sector
+  function buscarSector() {
+    const texto = document.getElementById("inputSector").value.trim().toLowerCase();
+    if (!texto || !capaSector) {
+      alert("Ingrese un nombre de sector válido.");
+      return;
+    }
+
+    let encontrado = false;
+    capaSector.eachLayer(function (layer) {
+      const nombre = (layer.feature.properties.name || "").toLowerCase();
+      if (nombre.includes(texto)) {
+        map.fitBounds(layer.getBounds());
+        layer.openPopup();
+        encontrado = true;
+      }
+    });
+
+    if (!encontrado) {
+      alert("No se encontró ningún sector con ese nombre.");
+    }
+  }
 </script>
 
 </body>
