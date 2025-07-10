@@ -178,26 +178,32 @@
 
   // Función de búsqueda por nombre del Sector
   function buscarSector() {
-    const texto = document.getElementById("inputSector").value.trim().toLowerCase();
-    if (!texto || !capaSector) {
-      alert("Ingrese un nombre de sector válido.");
-      return;
-    }
+  const texto = normalizarTexto(document.getElementById("inputSector").value.trim());
+  console.log("Buscando sector:", texto);
 
-    let encontrado = false;
-    capaSector.eachLayer(function (layer) {
-      const nombre = (layer.feature.properties.Name || "").toLowerCase();
-      if (nombre.includes(texto)) {
-        map.fitBounds(layer.getBounds());
-        layer.openPopup();
-        encontrado = true;
-      }
-    });
-
-    if (!encontrado) {
-      alert("No se encontró ningún sector con ese nombre.");
-    }
+  if (!texto || !capaSector) {
+    alert("Ingrese un nombre de sector válido.");
+    return;
   }
+
+  let encontrado = false;
+
+  capaSector.eachLayer(function (layer) {
+    const props = layer.feature.properties;
+    const nombre = normalizarTexto(props.Name || "");
+    console.log("Comparando con:", nombre);
+
+    if (nombre.includes(texto)) {
+      map.fitBounds(layer.getBounds());
+      layer.openPopup();
+      encontrado = true;
+    }
+  });
+
+  if (!encontrado) {
+    alert("No se encontró ningún sector con ese nombre.");
+  }
+}
 </script>
 
 </body>
