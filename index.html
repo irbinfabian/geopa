@@ -1,69 +1,3 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>Geoportal Interactivo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    #map {
-      height: 100vh;
-      width: 100%;
-    }
-
-    .info.legend {
-      background: white;
-      padding: 8px;
-      font-size: 14px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      border-radius: 5px;
-      line-height: 18px;
-    }
-
-    .info.legend i {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      margin-right: 8px;
-      vertical-align: middle;
-    }
-
-    #busqueda {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 1000;
-      background: white;
-      padding: 8px;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-
-    #busqueda input {
-      width: 200px;
-      padding: 4px;
-    }
-
-    #busqueda button {
-      padding: 4px 8px;
-    }
-  </style>
-</head>
-<body>
-
-<!-- Buscador -->
-<div id="busqueda">
-  <input type="text" id="inputSector" placeholder="Buscar Sector..." />
-  <button onclick="buscarSector()">Buscar</button>
-</div>
-
-<div id="map"></div>
-
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
   var map = L.map('map').setView([-1.5, -78.5], 7);
 
@@ -73,7 +7,8 @@
   }).addTo(map);
 
   var overlayLayers = {};
-  var capaSector = null;  // Guardaremos la capa "Sector" aquí
+  var capaSector = null;
+  var sectorResaltado = null;
 
   function estiloNDVI(feature) {
     const clase = (feature.properties.CLASE || "").trim();
@@ -109,7 +44,7 @@
             });
           },
           onEachFeature: function (feature, layer) {
-            let popup = "<strong>" + nombre + "</strong><br>";
+            let popup = `<strong>${nombre}</strong><br>`;
             for (const key in feature.properties) {
               popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
             }
@@ -129,7 +64,7 @@
 
   const controlCapas = L.control.layers(null, overlayLayers).addTo(map);
 
-  // Cargar las capas
+  // Cargar capas
   cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
     color: "#1f78b4"
   });
@@ -142,7 +77,7 @@
     color: "#ff7f00"
   });
 
-  // Leyenda
+  // Leyenda NDVI
   var legend = L.control({ position: 'bottomright' });
 
   legend.onAdd = function (map) {
@@ -176,35 +111,35 @@
 
   legend.addTo(map);
 
-  // Función de búsqueda por nombre del Sector
+  // Función de búsqueda
   function buscarSector() {
-  const texto = normalizarTexto(document.getElementById("inputSector").value.trim());
-  console.log("Buscando sector:", texto);
-
-  if (!texto || !capaSector) {
-    alert("Ingrese un nombre de sector válido.");
-    return;
-  }
-
-  let encontrado = false;
-
-  capaSector.eachLayer(function (layer) {
-    const props = layer.feature.properties;
-    const nombre = normalizarTexto(props.Name || "");
-    console.log("Comparando con:", nombre);
-
-    if (nombre.includes(texto)) {
-      map.fitBounds(layer.getBounds());
-      layer.openPopup();
-      encontrado = true;
+    const texto = document.getElementById("inputSector").value.trim().toLowerCase();
+    if (!texto || !capaSector) {
+      alert("Ingrese un nombre de sector válido.");
+      return;
     }
-  });
 
-  if (!encontrado) {
-    alert("No se encontró ningún sector con ese nombre.");
+    // Quitar resaltado anterior
+    if (sectorResaltado) {
+      sectorResaltado.setStyle({ color: "#ff7f00", weight: 1 });
+      sectorResaltado = null;
+    }
+
+    let encontrado = false;
+    capaSector.eachLayer(function (layer) {
+      const nombre = (layer.feature.properties.Name || "").toLowerCase();
+      if (nombre.includes(texto)) {
+        layer.setStyle({ color: "red", weight: 3 });
+        map.fitBounds(layer.getBounds());
+        layer.openPopup();
+        sectorResaltado = layer;
+        encontrado = true;
+      }
+    });
+
+    if (!encontrado) {
+      alert("No se encontró ningún sector con ese nombre.");
+    }
   }
-}
 </script>
 
-</body>
-</html>
