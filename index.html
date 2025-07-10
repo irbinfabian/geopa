@@ -130,11 +130,14 @@
   const controlCapas = L.control.layers(null, overlayLayers).addTo(map);
 
   // Cargar las capas
+ 
+  cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", estiloNDVI);
+  
   cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
     color: "#1f78b4"
   });
 
-  cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", estiloNDVI);
+
 
   cargarGeojson("NDVI 2024", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2024_08.geojson", estiloNDVI);
 
