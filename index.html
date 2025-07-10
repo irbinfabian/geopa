@@ -4,15 +4,12 @@
   <meta charset="UTF-8" />
   <title>Geoportal Interactivo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     #map {
       height: 100vh;
       width: 100%;
     }
-
     .info.legend {
       background: white;
       padding: 8px;
@@ -21,7 +18,6 @@
       border-radius: 5px;
       line-height: 18px;
     }
-
     .info.legend i {
       display: inline-block;
       width: 18px;
@@ -29,7 +25,6 @@
       margin-right: 8px;
       vertical-align: middle;
     }
-
     #busqueda {
       position: absolute;
       top: 10px;
@@ -40,12 +35,10 @@
       border-radius: 5px;
       box-shadow: 0 0 10px rgba(0,0,0,0.3);
     }
-
     #busqueda input {
       width: 200px;
       padding: 4px;
     }
-
     #busqueda button {
       padding: 4px 8px;
     }
@@ -53,15 +46,13 @@
 </head>
 <body>
 
-<!-- Buscador -->
 <div id="busqueda">
-  <input type="text" id="inputSector" placeholder="Buscar Sector..." />
+  <input type="text" id="inputSector" placeholder="Buscar Sector..." onkeypress="if(event.key==='Enter'){buscarSector();}" />
   <button onclick="buscarSector()">Buscar</button>
 </div>
 
 <div id="map"></div>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
@@ -73,7 +64,7 @@
   }).addTo(map);
 
   var overlayLayers = {};
-  var capaSector = null;  // Guardaremos la capa "Sector" aquí
+  var capaSector = null;
 
   function estiloNDVI(feature) {
     const clase = (feature.properties.CLASE || "").trim();
@@ -111,7 +102,7 @@
           onEachFeature: function (feature, layer) {
             let popup = "<strong>" + nombre + "</strong><br>";
             for (const key in feature.properties) {
-              popup += <b>${key}:</b> ${feature.properties[key]}<br>;
+              popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
             }
             layer.bindPopup(popup);
           }
@@ -129,23 +120,15 @@
 
   const controlCapas = L.control.layers(null, overlayLayers).addTo(map);
 
-  // Cargar las capas
- 
   cargarGeojson("NDVI 2020", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2020_02.geojson", estiloNDVI);
-  
   cargarGeojson("AOI", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//AOI.geojson", {
     color: "#1f78b4"
   });
-
-
-
   cargarGeojson("NDVI 2024", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//NDVI_2024_08.geojson", estiloNDVI);
-
   cargarGeojson("Sector", "https://veanbhxzftwbcbwmlzhq.supabase.co/storage/v1/object/public/samantha2017//Poblados.geojson", {
     color: "#ff7f00"
   });
 
-  // Leyenda
   var legend = L.control({ position: 'bottomright' });
 
   legend.onAdd = function (map) {
@@ -179,7 +162,6 @@
 
   legend.addTo(map);
 
-  // Función de búsqueda por nombre del Sector
   function buscarSector() {
     const texto = document.getElementById("inputSector").value.trim().toLowerCase();
     if (!texto || !capaSector) {
