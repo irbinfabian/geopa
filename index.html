@@ -101,7 +101,7 @@
           pointToLayer: function (feature, latlng) {
             return L.circleMarker(latlng, {
               radius: 6,
-              fillColor: estilo.color || "blue",
+              fillColor: estilo.color || "#ff7f00", // naranja para Sector
               color: "#000",
               weight: 1,
               opacity: 1,
@@ -109,12 +109,12 @@
             });
           },
           onEachFeature: function (feature, layer) {
-  let popup = "<strong>" + nombre + "</strong><br>";
-  for (const key in feature.properties) {
-    popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
-  }
-  layer.bindPopup(popup);
-}
+            let popup = "<strong>" + nombre + "</strong><br>";
+            for (const key in feature.properties) {
+              popup += `<b>${key}:</b> ${feature.properties[key]}<br>`;
+            }
+            layer.bindPopup(popup);
+          }
         }).addTo(map);
 
         overlayLayers[nombre] = capa;
@@ -176,7 +176,7 @@
 
   legend.addTo(map);
 
-  // Función de búsqueda por nombre del Sector
+  // Función de búsqueda por nombre del Sector (puntos)
   function buscarSector() {
     const texto = document.getElementById("inputSector").value.trim().toLowerCase();
     if (!texto || !capaSector) {
@@ -185,16 +185,32 @@
     }
 
     let encontrado = false;
-    capaSector.eachLayer(function (layer) {
+
+    // Restaurar estilo original a todos los puntos (Sector)
+    capaSector.eachLayer(function(layer) {
+      layer.setStyle({
+        radius: 6,
+        fillColor: "#ff7f00",
+        color: "#000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.7
+      });
+    });
+
+    // Buscar y resaltar puntos que coincidan
+    capaSector.eachLayer(function(layer) {
       const nombre = (layer.feature.properties.Name || "").toLowerCase();
       if (nombre.includes(texto)) {
-        map.fitBounds(layer.getBounds());
-      layer.setStyle({
-  weight: 3,
-  color: 'red'
-});
-        
-        
+        map.setView(layer.getLatLng(), 15);  // Centrar y hacer zoom al punto
+        layer.setStyle({
+          radius: 10,
+          fillColor: "red",
+          color: "#f00",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 1
+        });
         layer.openPopup();
         encontrado = true;
       }
