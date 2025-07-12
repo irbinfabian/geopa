@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportar Evento - Sistema de Emergencias</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            padding: 25px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1em;
+        }
+
+        .form-container {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 1em;
+        }
+
+        .required {
+            color: #ef4444;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .location-section {
+            background: #f0f9ff;
+            border: 2px solid #bae6fd;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .location-section h3 {
+            color: #0369a1;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .location-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .location-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .location-btn.primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .location-btn.primary:hover {
+            background: #2563eb;
+        }
+
+        .location-btn.secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .location-btn.secondary:hover {
+            background: #d1d5db;
+        }
+
+        .coordinates-display {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            text-align: center;
+            font-family: monospace;
+            color: #374151;
+        }
+
+        .coordinates-display.active {
+            background: #dcfce7;
+            border-color: #16a34a;
+            color: #166534;
+        }
+
+        .map-container {
+            height: 200px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 15px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #16a34a;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #dc2626;
+        }
+
+        .status.loading {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #3b82f6;
+        }
+
+        .event-type-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .event-type-option {
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .event-type-option:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+        }
+
+        .event-type-option.selected {
+            border-color: #3b82f6;
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .event-type-option .icon {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .quick-location {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .quick-location-btn {
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .quick-location-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 5px;
+                border-radius: 15px;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            .event-type-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 Reportar Evento</h1>
+            <p>Ayuda a mantener informada a la comunidad</p>
+        </div>
+
+        <div class="form-container">
+            <form id="eventForm">
+                <!-- Tipo de Evento -->
+                <div class="form-group">
+                    <label>¿Qué está ocurriendo? <span class="required">*</span></label>
+                    <div class="event-type-grid" id="eventTypeGrid">
+                        <div class="event-type-option" data-type="Emergencia">
+                            <div class="icon">🚨</div>
+                            <div>Emergencia</div>
+                        </div>
+                        <div class="event-type-option" data-type="Accidente">
+                            <div class="icon">🚗</div>
+                            <div>Accidente</div>
+                        </div>
+                        <div class="event-type-option" data-type="Incendio">
+                            <div class="icon">🔥</div>
+                            <div>Incendio</div>
+                        </div>
+                        <div class="event-type-option" data-type="Inundación">
+                            <div class="icon">🌊</div>
+                            <div>Inundación</div>
+                        </div>
+                        <div class="event-type-option" data-type="Deslizamiento">
+                            <div class="icon">⛰️</div>
+                            <div>Deslizamiento</div>
+                        </div>
+                        <div class="event-type-option" data-type="Evento Social">
+                            <div class="icon">🎉</div>
+                            <div>Evento Social</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="tipoEvento" name="tipo_evento" required>
+                </div>
+
+                <!-- Descripción del Evento -->
+                <div class="form-group">
+                    <label for="evento">Describe brevemente lo que está pasando <span class="required">*</span></label>
+                    <input type="text" id="evento" name="evento" required 
+                           placeholder="Ej: Choque entre dos vehículos, Incendio en vivienda, etc.">
+                </div>
+
+                <!-- Sector -->
+                <div class="form-group">
+                    <label for="sector">Sector o barrio</label>
+                    <input type="text" id="sector" name="sector" 
+                           placeholder="Ej: Centro, La Merced, Obrero, etc.">
+                    <div class="quick-location">
+                        <button type="button" class="quick-location-btn" onclick="setSector('Centro')">Centro</button>
+                        <button type="button" class="quick-location-btn" onclick="setSector('La Merced')">La Merced</button>
+                        <button type="button" class="quick-location-btn" onclick="setSector('Obrero')">Obrero</button>
+                        <button type="button" class="quick-location-btn" onclick="setSector('Mariscal')">Mariscal</button>
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                <div class="form-group">
+                    <label for="observacion">Observaciones adicionales</label>
+                    <textarea id="observacion" name="observacion" 
+                              placeholder="Información adicional que pueda ser útil (heridos, vías bloqueadas, etc.)"></textarea>
+                </div>
+
+                <!-- Ubicación -->
+                <div class="location-section">
+                    <h3>📍 Ubicación del evento</h3>
+                    <div class="location-buttons">
+                        <button type="button" class="location-btn primary" onclick="getCurrentLocation()">
+                            📱 Mi ubicación actual
+                        </button>
+                        <button type="button" class="location-btn secondary" onclick="selectOnMap()">
+                            🗺️ Seleccionar en mapa
+                        </button>
+                    </div>
+                    
+                    <div class="coordinates-display" id="coordinatesDisplay">
+                        📍 Presiona un botón para obtener la ubicación
+                    </div>
+                    
+                    <div class="map-container hidden" id="mapContainer">
+                        <div id="map"></div>
+                    </div>
+                    
+                    <input type="hidden" id="latitud" name="latitud" required>
+                    <input type="hidden" id="longitud" name="longitud" required>
+                </div>
+
+                <!-- Botón de envío -->
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                    📤 Reportar Evento
+                </button>
+            </form>
+
+            <div id="status" class="status hidden"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <script>
+        let map;
+        let marker;
+        let selectedEventType = '';
+        let hasLocation = false;
+
+        // Configuración de Supabase (usar las mismas credenciales del dashboard)
+        const SUPABASE_URL = 'https://veanbhxzftwbcbwmlzhq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlYW5iaHh6ZnR3YmNid21semhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMDA3MjQsImV4cCI6MjA2NzU3NjcyNH0.HCvYVpG65RtWtqtXGJ2zds_gdu0H34qTUJWyZ0TbZSM';
+        const TABLE_NAME = 'eventos_espaciales';
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventTypeSelection();
+            setupFormValidation();
+        });
+
+        // Configurar selección de tipo de evento
+        function setupEventTypeSelection() {
+            const options = document.querySelectorAll('.event-type-option');
+            
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remover selección anterior
+                    options.forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Seleccionar actual
+                    this.classList.add('selected');
+                    selectedEventType = this.dataset.type;
+                    document.getElementById('tipoEvento').value = selectedEventType;
+                    
+                    validateForm();
+                });
+            });
+        }
+
+        // Configurar validación del formulario
+        function setupFormValidation() {
+            const form = document.getElementById('eventForm');
+            const inputs = form.querySelectorAll('input[required], textarea[required]');
+            
+            inputs.forEach(input => {
+                input.addEventListener('input', validateForm);
+            });
+
+            form.addEventListener('submit', handleSubmit);
+        }
+
+        // Validar formulario
+        function validateForm() {
+            const evento = document.getElementById('evento').value.trim();
+            const tipoEvento = document.getElementById('tipoEvento').value;
+            const submitBtn = document.getElementById('submitBtn');
+            
+            const isValid = evento && tipoEvento && hasLocation;
+            
+            submitBtn.disabled = !isValid;
+            submitBtn.style.opacity = isValid ? '1' : '0.6';
+        }
+
+        // Obtener ubicación actual
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                showStatus('Tu dispositivo no soporta geolocalización', 'error');
+                return;
+            }
+
+            showStatus('📍 Obteniendo tu ubicación...', 'loading');
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    setLocation(lat, lng);
+                    showStatus('✅ Ubicación obtenida correctamente', 'success');
+                },
+                function(error) {
+                    let message = 'Error al obtener ubicación: ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            message += 'Permisos denegados. Permite el acceso a la ubicación.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            message += 'Ubicación no disponible.';
+                            break;
+                        case error.TIMEOUT:
+                            message += 'Tiempo agotado.';
+                            break;
+                        default:
+                            message += 'Error desconocido.';
+                            break;
+                    }
+                    showStatus(message, 'error');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        // Seleccionar ubicación en mapa
+        function selectOnMap() {
+            const mapContainer = document.getElementById('mapContainer');
+            mapContainer.classList.remove('hidden');
+            
+            if (!map) {
+                // Coordenadas de Puyo como centro inicial
+                map = L.map('map').setView([-1.2845, -78.0947], 14);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                // Click en el mapa para seleccionar ubicación
+                map.on('click', function(e) {
+                    const lat = e.latlng.lat;
+                    const lng = e.latlng.lng;
+                    
+                    setLocation(lat, lng);
+                    showStatus('✅ Ubicación seleccionada en el mapa', 'success');
+                });
+            }
+            
+            // Redimensionar el mapa
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }
+
+        // Establecer ubicación
+        function setLocation(lat, lng) {
+            document.getElementById('latitud').value = lat;
+            document.getElementById('longitud').value = lng;
+            
+            const coordinatesDisplay = document.getElementById('coordinatesDisplay');
+            coordinatesDisplay.innerHTML = `
+                📍 <strong>Ubicación confirmada</strong><br>
+                Lat: ${lat.toFixed(6)}<br>
+                Lng: ${lng.toFixed(6)}
+            `;
+            coordinatesDisplay.classList.add('active');
+            
+            // Actualizar mapa si está visible
+            if (map) {
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+                
+                marker = L.marker([lat, lng]).addTo(map);
+                map.setView([lat, lng], 16);
+            }
+            
+            hasLocation = true;
+            validateForm();
+        }
+
+        // Establecer sector rápido
+        function setSector(sectorName) {
+            document.getElementById('sector').value = sectorName;
+        }
+
+        // Mostrar estado
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = message;
+            statusEl.className = `status ${type}`;
+            statusEl.classList.remove('hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusEl.classList.add('hidden');
+                }, 5000);
+            }
+        }
+
+        // Manejar envío del formulario
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            // Deshabilitar botón y mostrar loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loading-spinner"></div>Enviando...';
+            
+            showStatus('📤 Enviando reporte...', 'loading');
+
+            try {
+                // Recopilar datos del formulario
+                const formData = {
+                    evento: document.getElementById('evento').value.trim(),
+                    tipo_evento: document.getElementById('tipoEvento').value,
+                    sector: document.getElementById('sector').value.trim() || null,
+                    observacion: document.getElementById('observacion').value.trim() || null,
+                    latitud: parseFloat(document.getElementById('latitud').value),
+                    longitud: parseFloat(document.getElementById('longitud').value)
+                };
+
+                // Validar datos
+                if (!formData.evento || !formData.tipo_evento || !formData.latitud || !formData.longitud) {
+                    throw new Error('Faltan datos obligatorios');
+                }
+
+                // Enviar a Supabase
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE_NAME}`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`Error ${response.status}: ${errorData}`);
+                }
+
+                const result = await response.json();
+                
+                showStatus(`🎉 ¡Evento reportado exitosamente!
+                
+ID del reporte: ${result[0].id}
+Tipo: ${formData.tipo_evento}
+Ubicación: ${formData.latitud.toFixed(4)}, ${formData.longitud.toFixed(4)}
+
+Tu reporte ya está visible en el dashboard en tiempo real.
+¡Gracias por ayudar a mantener informada a la comunidad!`, 'success');
+
+                // Limpiar formulario
+                resetForm();
+                
+            } catch (error) {
+                showStatus(`❌ Error al enviar el reporte: ${error.message}
+
+Posibles causas:
+• Problemas de conexión a internet
+• Error en el servidor
+• Datos incompletos
+
+Por favor, verifica los datos e intenta nuevamente.`, 'error');
+            } finally {
+                // Restaurar botón
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        // Resetear formulario
+        function resetForm() {
+            document.getElementById('eventForm').reset();
+            
+            // Limpiar selecciones
+            document.querySelectorAll('.event-type-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Limpiar ubicación
+            const coordinatesDisplay = document.getElementById('coordinatesDisplay');
+            coordinatesDisplay.innerHTML = '📍 Presiona un botón para obtener la ubicación';
+            coordinatesDisplay.classList.remove('active');
+            
+            // Ocultar mapa
+            document.getElementById('mapContainer').classList.add('hidden');
+            
+            // Limpiar variables
+            selectedEventType = '';
+            hasLocation = false;
+            
+            if (marker && map) {
+                map.removeLayer(marker);
+                marker = null;
+            }
+            
+            validateForm();
+        }
+    </script>
+</body>
+</html>
