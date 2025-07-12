@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geoportal - Erosión Regresiva del Río Coca</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            text-align: center;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 140px);
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar {
+            width: 380px;
+            background: #f8f9fa;
+            border-right: 2px solid #dee2e6;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        .map-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #map {
+            height: 70%;
+            width: 100%;
+        }
+        
+        .statistics-panel {
+            height: 30%;
+            background: #f8f9fa;
+            border-top: 2px solid #dee2e6;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .layer-group {
+            margin-bottom: 25px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .layer-group h5 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-weight: 600;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+        
+        .layer-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .layer-item:hover {
+            background: #e3f2fd;
+            transform: translateX(5px);
+        }
+        
+        .layer-item input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        
+        .layer-item label {
+            margin: 0;
+            font-weight: 500;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .layer-icon {
+            margin-right: 8px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .symbology-controls {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f1f3f4;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .symbology-controls.active {
+            display: block;
+        }
+        
+        .symbology-controls select {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+        }
+        
+        .color-ramp {
+            display: flex;
+            height: 20px;
+            margin: 5px 0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .color-ramp div {
+            flex: 1;
+        }
+        
+        .stats-button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .stats-button:hover {
+            background: #2980b9;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            max-width: 300px;
+            z-index: 1000;
+        }
+        
+        .legend {
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .legend h6 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 15px;
+            border-radius: 3px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+        }
+        
+        .year-selector {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .year-selector h6 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .btn-year {
+            margin: 2px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            padding: 5px 12px;
+        }
+        
+        .btn-year.active {
+            background: #3498db;
+            border-color: #3498db;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .chart-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .chart-tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .chart-tab.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+            font-weight: 600;
+        }
+        
+        .chart-content {
+            display: none;
+        }
+        
+        .chart-content.active {
+            display: block;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f4;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .toggle-stats {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        
+        .toggle-stats:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1><i class="fas fa-map-marked-alt"></i> EROSIÓN REGRESIVA DEL RÍO COCA</h1>
+            <p>Geoportal Interactivo para el Análisis Multitemporal de Cobertura y Erosión</p>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <!-- Selector de años -->
+            <div class="year-selector">
+                <h6><i class="fas fa-calendar-alt"></i> Seleccionar Período</h6>
+                <div id="yearButtons">
+                    <button class="btn btn-outline-primary btn-year" data-year="2020">2020</button>
+                    <button class="btn btn-outline-primary btn-year" data-year="2021">2021</button>
+                    <button class="btn btn-outline-primary btn-year" data-year="2022">2022</button>
+                    <button class="btn btn-outline-primary btn-year" data-year="2023">2023</button>
+                    <button class="btn btn-outline-primary btn-year active" data-year="2024">2024</button>
+                    <button class="btn btn-outline-success btn-year" data-year="comparar">Comparar</button>
+                </div>
+            </div>
+            
+            <!-- Capas Base -->
+            <div class="layer-group">
+                <h5><i class="fas fa-layer-group"></i> Capas Base</h5>
+                <div class="layer-item">
+                    <input type="checkbox" id="aoi" checked>
+                    <i class="fas fa-vector-square layer-icon" style="color: #e74c3c;"></i>
+                    <label for="aoi">Área de Interés (AOI)</label>
+                    <button class="stats-button" onclick="showLayerStats('aoi')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="aoi-symbology">
+                        <select onchange="updateSymbology('aoi', this.value)">
+                            <option value="area">Por Área</option>
+                            <option value="observa">Por Observaciones</option>
+                            <option value="uniform">Color Uniforme</option>
+                        </select>
+                        <div class="color-ramp" id="aoi-ramp">
+                            <div style="background: #fee5d9;"></div>
+                            <div style="background: #fcbba1;"></div>
+                            <div style="background: #fc9272;"></div>
+                            <div style="background: #fb6a4a;"></div>
+                            <div style="background: #de2d26;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="sector" checked>
+                    <i class="fas fa-map-marked layer-icon" style="color: #9b59b6;"></i>
+                    <label for="sector">Sectores</label>
+                    <button class="stats-button" onclick="showLayerStats('sector')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="sector-symbology">
+                        <select onchange="updateSymbology('sector', this.value)">
+                            <option value="name">Por Nombre</option>
+                            <option value="uniform">Color Uniforme</option>
+                        </select>
+                        <div class="color-ramp" id="sector-ramp">
+                            <div style="background: #f3e5f5;"></div>
+                            <div style="background: #ce93d8;"></div>
+                            <div style="background: #ab47bc;"></div>
+                            <div style="background: #8e24aa;"></div>
+                            <div style="background: #6a1b9a;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cobertura del Suelo -->
+            <div class="layer-group">
+                <h5><i class="fas fa-seedling"></i> Cobertura del Suelo</h5>
+                <div class="layer-item">
+                    <input type="checkbox" id="cob2020">
+                    <i class="fas fa-leaf layer-icon" style="color: #27ae60;"></i>
+                    <label for="cob2020">Cobertura 2020-02</label>
+                    <button class="stats-button" onclick="showLayerStats('cob2020')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="cob2020-symbology">
+                        <select onchange="updateSymbology('cob2020', this.value)">
+                            <option value="nivel">Por Nivel de Cobertura</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="uniform">Color Uniforme</option>
+                        </select>
+                        <div class="color-ramp" id="cob2020-ramp">
+                            <div style="background: #f7fcf0;"></div>
+                            <div style="background: #c7e9c0;"></div>
+                            <div style="background: #74c476;"></div>
+                            <div style="background: #31a354;"></div>
+                            <div style="background: #006d2c;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="cob2021">
+                    <i class="fas fa-leaf layer-icon" style="color: #2ecc71;"></i>
+                    <label for="cob2021">Cobertura 2021-07</label>
+                    <button class="stats-button" onclick="showLayerStats('cob2021')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="cob2021-symbology">
+                        <select onchange="updateSymbology('cob2021', this.value)">
+                            <option value="nivel">Por Nivel de Cobertura</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="uniform">Color Uniforme</option>
+                        </select>
+                        <div class="color-ramp" id="cob2021-ramp">
+                            <div style="background: #f7fcf0;"></div>
+                            <div style="background: #c7e9c0;"></div>
+                            <div style="background: #74c476;"></div>
+                            <div style="background: #31a354;"></div>
+                            <div style="background: #006d2c;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="cob2022">
+                    <i class="fas fa-leaf layer-icon" style="color: #58d68d;"></i>
+                    <label for="cob2022">Cobertura 2022-09</label>
+                    <button class="stats-button" onclick="showLayerStats('cob2022')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="cob2022-symbology">
+                        <select onchange="updateSymbology('cob2022', this.value)">
+                            <option value="nivel">Por Nivel de Cobertura</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="uniform">Color Uniforme</option>
+                        </select>
+                        <div class="color-ramp" id="cob2022-ramp">
+                            <div style="background: #f7fcf0;"></div>
+                            <div style="background: #c7e9c0;"></div>
+                            <div style="background: #74c476;"></div>
+                            <div style="background: #31a354;"></div>
+                            <div style="background: #006d2c;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="cob2023">
+                    <i class="fas fa-leaf layer-icon" style="color: #82e0aa;"></i>
+                    <label for="cob2023">Cobertura 2023-09</label>
+                    <button class="stats-button" onclick="showLayerStats('cob2023')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="cob2023-symbology">
+                        <select onchange="updateSymbology('cob2023', this.value)">
+                            <option value="nivel">Por Nivel de Cobertura</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="uniform">Color Uniforme</option>
+                        </select>
+                        <div class="color-ramp" id="cob2023-ramp">
+                            <div style="background: #f7fcf0;"></div>
+                            <div style="background: #c7e9c0;"></div>
+                            <div style="background: #74c476;"></div>
+                            <div style="background: #31a354;"></div>
+                            <div style="background: #006d2c;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="cob2024">
+                    <i class="fas fa-leaf layer-icon" style="color: #abebc6;"></i>
+                    <label for="cob2024">Cobertura 2024-08</label>
+                    <button class="stats-button" onclick="showLayerStats('cob2024')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="cob2024-symbology">
+                        <select onchange="updateSymbology('cob2024', this.value)">
+                            <option value="nivel">Por Nivel de Cobertura</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="uniform">Color Uniforme</option>
+                        </select>
+                        <div class="color-ramp" id="cob2024-ramp">
+                            <div style="background: #f7fcf0;"></div>
+                            <div style="background: #c7e9c0;"></div>
+                            <div style="background: #74c476;"></div>
+                            <div style="background: #31a354;"></div>
+                            <div style="background: #006d2c;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Índices Espectrales -->
+            <div class="layer-group">
+                <h5><i class="fas fa-chart-line"></i> Índices Espectrales</h5>
+                <div class="layer-item">
+                    <input type="checkbox" id="ndvi2020">
+                    <i class="fas fa-chart-area layer-icon" style="color: #f39c12;"></i>
+                    <label for="ndvi2020">NDVI 2020</label>
+                    <button class="stats-button" onclick="showLayerStats('ndvi2020')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="ndvi2020-symbology">
+                        <select onchange="updateSymbology('ndvi2020', this.value)">
+                            <option value="clase">Por Clase NDVI</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="continuous">Gradiente Continuo</option>
+                        </select>
+                        <div class="color-ramp" id="ndvi2020-ramp">
+                            <div style="background: #8c510a;"></div>
+                            <div style="background: #d8b365;"></div>
+                            <div style="background: #f6e8c3;"></div>
+                            <div style="background: #c7eae5;"></div>
+                            <div style="background: #5ab4ac;"></div>
+                            <div style="background: #01665e;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="ndvi2024">
+                    <i class="fas fa-chart-area layer-icon" style="color: #e67e22;"></i>
+                    <label for="ndvi2024">NDVI 2024</label>
+                    <button class="stats-button" onclick="showLayerStats('ndvi2024')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="ndvi2024-symbology">
+                        <select onchange="updateSymbology('ndvi2024', this.value)">
+                            <option value="clase">Por Clase NDVI</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="continuous">Gradiente Continuo</option>
+                        </select>
+                        <div class="color-ramp" id="ndvi2024-ramp">
+                            <div style="background: #8c510a;"></div>
+                            <div style="background: #d8b365;"></div>
+                            <div style="background: #f6e8c3;"></div>
+                            <div style="background: #c7eae5;"></div>
+                            <div style="background: #5ab4ac;"></div>
+                            <div style="background: #01665e;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="ndwi2020">
+                    <i class="fas fa-tint layer-icon" style="color: #3498db;"></i>
+                    <label for="ndwi2020">NDWI 2020</label>
+                    <button class="stats-button" onclick="showLayerStats('ndwi2020')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="ndwi2020-symbology">
+                        <select onchange="updateSymbology('ndwi2020', this.value)">
+                            <option value="clase">Por Clase NDWI</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="continuous">Gradiente Continuo</option>
+                        </select>
+                        <div class="color-ramp" id="ndwi2020-ramp">
+                            <div style="background: #fee391;"></div>
+                            <div style="background: #fec44f;"></div>
+                            <div style="background: #fe9929;"></div>
+                            <div style="background: #d95f0e;"></div>
+                            <div style="background: #993404;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="ndwi2024">
+                    <i class="fas fa-tint layer-icon" style="color: #5dade2;"></i>
+                    <label for="ndwi2024">NDWI 2024</label>
+                    <button class="stats-button" onclick="showLayerStats('ndwi2024')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="ndwi2024-symbology">
+                        <select onchange="updateSymbology('ndwi2024', this.value)">
+                            <option value="clase">Por Clase NDWI</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="continuous">Gradiente Continuo</option>
+                        </select>
+                        <div class="color-ramp" id="ndwi2024-ramp">
+                            <div style="background: #fee391;"></div>
+                            <div style="background: #fec44f;"></div>
+                            <div style="background: #fe9929;"></div>
+                            <div style="background: #d95f0e;"></div>
+                            <div style="background: #993404;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="ndoai2020">
+                    <i class="fas fa-water layer-icon" style="color: #17a2b8;"></i>
+                    <label for="ndoai2020">NDOAI 2020</label>
+                    <button class="stats-button" onclick="showLayerStats('ndoai2020')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="ndoai2020-symbology">
+                        <select onchange="updateSymbology('ndoai2020', this.value)">
+                            <option value="clase">Por Clase NDOAI</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="continuous">Gradiente Continuo</option>
+                        </select>
+                        <div class="color-ramp" id="ndoai2020-ramp">
+                            <div style="background: #ece7f2;"></div>
+                            <div style="background: #d0d1e6;"></div>
+                            <div style="background: #a6bddb;"></div>
+                            <div style="background: #74a9cf;"></div>
+                            <div style="background: #3690c0;"></div>
+                            <div style="background: #0570b0;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" id="ndoai2024">
+                    <i class="fas fa-water layer-icon" style="color: #85c1e9;"></i>
+                    <label for="ndoai2024">NDOAI 2024</label>
+                    <button class="stats-button" onclick="showLayerStats('ndoai2024')" title="Ver estadísticas">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <div class="symbology-controls" id="ndoai2024-symbology">
+                        <select onchange="updateSymbology('ndoai2024', this.value)">
+                            <option value="clase">Por Clase NDOAI</option>
+                            <option value="dn">Por Valor Digital</option>
+                            <option value="continuous">Gradiente Continuo</option>
+                        </select>
+                        <div class="color-ramp" id="ndoai2024-ramp">
+                            <div style="background: #ece7f2;"></div>
+                            <div style="background: #d0d1e6;"></div>
+                            <div style="background: #a6bddb;"></div>
+                            <div style="background: #74a9cf;"></div>
+                            <div style="background: #3690c0;"></div>
+                            <div style="background: #0570b0;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Leyenda Dinámica -->
+            <div class="legend">
+                <h6><i class="fas fa-info-circle"></i> Leyenda Activa</h6>
+                <div id="dynamicLegend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>Área de Interés</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9b59b6;"></div>
+                        <span>Sectores</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            <button class="toggle-stats" onclick="toggleStatistics()">
+                <i class="fas fa-chart-bar"></i> Estadísticas
+            </button>
+            
+            <!-- Panel de información -->
+            <div class="info-panel">
+                <h6><i class="fas fa-info-circle"></i> Información</h6>
+                <p><strong>Proyecto:</strong> Análisis de Erosión Regresiva</p>
+                <p><strong>Ubicación:</strong> Río Coca, Ecuador</p>
+                <p><strong>Período:</strong> 2020-2024</p>
+                <p><strong>Capas:</strong> <span id="layerCount">2</span> activas</p>
+                <div id="coordinates" style="font-size: 0.9em; color: #666;">
+                    <i class="fas fa-crosshairs"></i> Coordenadas: --
+                </div>
+            </div>
+            
+            <!-- Panel de Estadísticas -->
+            <div class="statistics-panel" id="statisticsPanel" style="display: none;">
+                <div class="chart-tabs">
+                    <div class="chart-tab active" onclick="showChartTab('overview')">
+                        <i class="fas fa-chart-pie"></i> Resumen
+                    </div>
+                    <div class="chart-tab" onclick="showChartTab('temporal')">
+                        <i class="fas fa-chart-line"></i> Temporal
+                    </div>
+                    <div class="chart-tab" onclick="showChartTab('comparison')">
+                        <i class="fas fa-chart-bar"></i> Comparación
+                    </div>
+                    <div class="chart-tab" onclick="showChartTab('analysis')">
+                        <i class="fas fa-calculator"></i> Análisis
+                    </div>
+                </div>
+                
+                <!-- Tab Content: Resumen -->
+                <div class="chart-content active" id="overview-content">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-value" id="totalArea">1,250</div>
+                                <div class="stat-label">Área Total (ha)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-value" id="vegetationArea">875</div>
+                                <div class="stat-label">Vegetación (ha)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-value" id="waterArea">125</div>
+                                <div class="stat-label">Agua (ha)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-value" id="erosionRate">-2.3%</div>
+                                <div class="stat-label">Cambio Anual</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h6><i class="fas fa-chart-pie"></i> Distribución de Cobertura</h6>
+                        <canvas id="coverageChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Tab Content: Temporal -->
+                <div class="chart-content" id="temporal-content">
+                    <div class="chart-container">
+                        <h6><i class="fas fa-chart-line"></i> Evolución Temporal de Cobertura</h6>
+                        <canvas id="temporalChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h6><i class="fas fa-chart-area"></i> Tendencia de Índices Espectrales</h6>
+                        <canvas id="indicesChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Tab Content: Comparación -->
+                <div class="chart-content" id="comparison-content">
+                    <div class="chart-container">
+                        <h6><i class="fas fa-chart-bar"></i> Comparación entre Períodos</h6>
+                        <canvas id="comparisonChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h6><i class="fas fa-exchange-alt"></i> Matriz de Cambios</h6>
+                        <canvas id="changeMatrix" width="400" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Tab Content: Análisis -->
+                <div class="chart-content" id="analysis-content">
+                    <div class="chart-container">
+                        <h6><i class="fas fa-calculator"></i> Análisis Estadístico</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <canvas id="histogramChart" width="200" height="150"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <canvas id="correlationChart" width="200" height="150"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Áreas de Riesgo</h6>
+                        <canvas id="riskChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading screen -->
+    <div class="loading" id="loading" style="display: none;">
+        <div class="spinner"></div>
+        <div class="text-center">Cargando datos...</div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Configuración del mapa
+        const map = L.map('map').setView([-0.5, -77.0], 10); // Coordenadas aproximadas del Río Coca
+        
+        // Capas base
+        const baseLayers = {
+            'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }),
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community'
+            }),
+            'Terrain': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap'
+            })
+        };
+        
+        // Añadir capa base por defecto
+        baseLayers['OpenStreetMap'].addTo(map);
+        
+        // Control de capas base
+        L.control.layers(baseLayers).addTo(map);
+        
+        // Variables globales
+        const dataLayers = {};
+        let activeYear = '2024';
+        let charts = {};
+        let symbologyConfig = {};
+        
+        // Configuraciones de simbología
+        const symbologyOptions = {
+            nivel: {
+                'Bosque Denso': '#006d2c',
+                'Bosque Fragmentado': '#31a354',
+                'Vegetación Secundaria': '#74c476',
+                'Cultivos': '#c7e9c0',
+                'Suelo Desnudo': '#8c510a',
+                'Agua': '#0570b0'
+            },
+            clase: {
+                'Muy Alto': '#006d2c',
+                'Alto': '#31a354',
+                'Medio': '#74c476',
+                'Bajo': '#c7e9c0',
+                'Muy Bajo': '#fee391'
+            },
+            dn: {
+                continuous: true,
+                min: '#fee391',
+                max: '#006d2c'
+            }
+        };
+        
+        // Datos simulados para estadísticas
+        const statisticsData = {
+            temporal: {
+                labels: ['2020-02', '2021-07', '2022-09', '2023-09', '2024-08'],
+                datasets: [
+                    {
+                        label: 'Bosque (%)',
+                        data: [78.5, 76.2, 74.8, 72.1, 69.3],
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)'
+                    },
+                    {
+                        label: 'Agua (%)',
+                        data: [8.2, 9.1, 10.5, 12.3, 14.7],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)'
+                    },
+                    {
+                        label: 'Suelo Desnudo (%)',
+                        data: [13.3, 14.7, 14.7, 15.6, 16.0],
+                        borderColor: '#e67e22',
+                        backgroundColor: 'rgba(230, 126, 34, 0.1)'
+                    }
+                ]
+            },
+            coverage: {
+                labels: ['Bosque Denso', 'Bosque Fragmentado', 'Vegetación Secundaria', 'Agua', 'Suelo Desnudo'],
+                data: [45.2, 24.1, 15.3, 10.1, 5.3],
+                backgroundColor: ['#006d2c', '#31a354', '#74c476', '#3498db', '#e67e22']
+            },
+            indices: {
+                labels: ['2020', '2021', '2022', '2023', '2024'],
+                datasets: [
+                    {
+                        label: 'NDVI Promedio',
+                        data: [0.65, 0.62, 0.60, 0.57, 0.54],
+                        borderColor: '#27ae60',
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'NDWI Promedio',
+                        data: [0.15, 0.18, 0.22, 0.25, 0.28],
+                        borderColor: '#3498db',
+                        yAxisID: 'y1'
+                    }
+                ]
+            }
+        };
+        
+        // Función para crear capas con simbología
+        function createLayerWithSymbology(layerId, data, symbologyType = 'uniform') {
+            const features = generateSampleFeatures(layerId);
+            const layerGroup = L.layerGroup();
+            
+            features.forEach(feature => {
+                const color = getFeatureColor(feature, symbologyType, layerId);
+                const layer = L.geoJSON(feature, {
+                    style: {
+                        fillColor: color,
+                        color: color,
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.7
+                    }
+                });
+                
+                layer.bindPopup(createPopupContent(feature, layerId));
+                layerGroup.addLayer(layer);
+            });
+            
+            return layerGroup;
+        }
+        
+        // Función para generar características de muestra
+        function generateSampleFeatures(layerId) {
+            const features = [];
+            const baseCoords = [-0.5, -77.0];
+            
+            for (let i = 0; i < 10; i++) {
+                const lat = baseCoords[0] + (Math.random() - 0.5) * 0.2;
+                const lng = baseCoords[1] + (Math.random() - 0.5) * 0.2;
+                
+                let properties = {
+                    id: i + 1
+                };
+                
+                // Añadir propiedades específicas según el tipo de capa
+                if (layerId.includes('cob')) {
+                    properties.nivel = ['Bosque Denso', 'Bosque Fragmentado', 'Vegetación Secundaria', 'Agua', 'Suelo Desnudo'][Math.floor(Math.random() * 5)];
+                    properties.dn = Math.floor(Math.random() * 255);
+                } else if (layerId.includes('ndvi') || layerId.includes('ndwi') || layerId.includes('ndoai')) {
+                    properties.clase = ['Muy Alto', 'Alto', 'Medio', 'Bajo', 'Muy Bajo'][Math.floor(Math.random() * 5)];
+                    properties.dn = Math.floor(Math.random() * 255);
+                } else if (layerId === 'aoi') {
+                    properties.txt = `Área ${i + 1}`;
+                    properties.area = Math.random() * 1000 + 100;
+                    properties.observa = ['Normal', 'Erosión Leve', 'Erosión Moderada', 'Erosión Severa'][Math.floor(Math.random() * 4)];
+                } else if (layerId === 'sector') {
+                    properties.name = `Sector ${String.fromCharCode(65 + i)}`;
+                }
+                
+                features.push({
+                    type: 'Feature',
+                    properties: properties,
+                    geometry: {
+                        type: 'Polygon',
+                        coordinates: [[
+                            [lng - 0.01, lat - 0.01],
+                            [lng + 0.01, lat - 0.01],
+                            [lng + 0.01, lat + 0.01],
+                            [lng - 0.01, lat + 0.01],
+                            [lng - 0.01, lat - 0.01]
+                        ]]
+                    }
+                });
+            }
+            
+            return features;
+        }
+        
+        // Función para obtener color de característica
+        function getFeatureColor(feature, symbologyType, layerId) {
+            const props = feature.properties;
+            
+            if (symbologyType === 'uniform') {
+                const layerColors = {
+                    'aoi': '#e74c3c',
+                    'sector': '#9b59b6',
+                    'cob2020': '#27ae60',
+                    'cob2021': '#2ecc71',
+                    'cob2022': '#58d68d',
+                    'cob2023': '#82e0aa',
+                    'cob2024': '#abebc6',
+                    'ndvi2020': '#f39c12',
+                    'ndvi2024': '#e67e22',
+                    'ndwi2020': '#3498db',
+                    'ndwi2024': '#5dade2',
+                    'ndoai2020': '#17a2b8',
+                    'ndoai2024': '#85c1e9'
+                };
+                return layerColors[layerId] || '#666666';
+            }
+            
+            if (symbologyType === 'nivel' && props.nivel) {
+                return symbologyOptions.nivel[props.nivel] || '#666666';
+            }
+            
+            if (symbologyType === 'clase' && props.clase) {
+                return symbologyOptions.clase[props.clase] || '#666666';
+            }
+            
+            if (symbologyType === 'dn' && props.dn !== undefined) {
+                const ratio = props.dn / 255;
+                return interpolateColor('#fee391', '#006d2c', ratio);
+            }
+            
+            if (symbologyType === 'area' && props.area) {
+                const maxArea = 1100;
+                const ratio = props.area / maxArea;
+                return interpolateColor('#fee5d9', '#de2d26', ratio);
+            }
+            
+            if (symbologyType === 'observa' && props.observa) {
+                const observaColors = {
+                    'Normal': '#27ae60',
+                    'Erosión Leve': '#f39c12',
+                    'Erosión Moderada': '#e67e22',
+                    'Erosión Severa': '#e74c3c'
+                };
+                return observaColors[props.observa] || '#666666';
+            }
+            
+            if (symbologyType === 'name' && props.name) {
+                const hash = hashCode(props.name);
+                return `hsl(${hash % 360}, 70%, 50%)`;
+            }
+            
+            return '#666666';
+        }
+        
+        // Función para interpolar colores
+        function interpolateColor(color1, color2, ratio) {
+            const hex = (color) => {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : null;
+            };
+            
+            const c1 = hex(color1);
+            const c2 = hex(color2);
+            
+            if (!c1 || !c2) return color1;
+            
+            const r = Math.round(c1.r + (c2.r - c1.r) * ratio);
+            const g = Math.round(c1.g + (c2.g - c1.g) * ratio);
+            const b = Math.round(c1.b + (c2.b - c1.b) * ratio);
+            
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+        
+        // Función hash para generar colores consistentes
+        function hashCode(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash);
+        }
+        
+        // Función para crear contenido de popup
+        function createPopupContent(feature, layerId) {
+            const props = feature.properties;
+            let content = `<strong>${layerId.toUpperCase()}</strong><br>`;
+            
+            Object.keys(props).forEach(key => {
+                if (key !== 'id') {
+                    content += `<strong>${key}:</strong> ${props[key]}<br>`;
+                }
+            });
+            
+            return content;
+        }
+        
+        // Función para mostrar/ocultar capas
+        function toggleLayer(layerId) {
+            const checkbox = document.getElementById(layerId);
+            const symbologyDiv = document.getElementById(`${layerId}-symbology`);
+            
+            if (checkbox.checked) {
+                symbologyDiv.classList.add('active');
+                
+                if (!dataLayers[layerId]) {
+                    showLoading();
+                    
+                    setTimeout(() => {
+                        const symbologyType = symbologyConfig[layerId] || 'uniform';
+                        dataLayers[layerId] = createLayerWithSymbology(layerId, null, symbologyType);
+                        dataLayers[layerId].addTo(map);
+                        hideLoading();
+                        updateLayerCount();
+                        updateDynamicLegend();
+                    }, 1000);
+                } else {
+                    dataLayers[layerId].addTo(map);
+                    updateLayerCount();
+                    updateDynamicLegend();
+                }
+            } else {
+                symbologyDiv.classList.remove('active');
+                if (dataLayers[layerId]) {
+                    map.removeLayer(dataLayers[layerId]);
+                    updateLayerCount();
+                    updateDynamicLegend();
+                }
+            }
+        }
+        
+        // Función para actualizar simbología
+        function updateSymbology(layerId, symbologyType) {
+            symbologyConfig[layerId] = symbologyType;
+            
+            if (dataLayers[layerId] && map.hasLayer(dataLayers[layerId])) {
+                map.removeLayer(dataLayers[layerId]);
+                dataLayers[layerId] = createLayerWithSymbology(layerId, null, symbologyType);
+                dataLayers[layerId].addTo(map);
+                updateDynamicLegend();
+            }
+        }
+        
+        // Función para actualizar leyenda dinámica
+        function updateDynamicLegend() {
+            const legendDiv = document.getElementById('dynamicLegend');
+            legendDiv.innerHTML = '';
+            
+            Object.keys(dataLayers).forEach(layerId => {
+                if (map.hasLayer(dataLayers[layerId])) {
+                    const symbologyType = symbologyConfig[layerId] || 'uniform';
+                    
+                    if (symbologyType === 'nivel') {
+                        Object.keys(symbologyOptions.nivel).forEach(key => {
+                            const item = document.createElement('div');
+                            item.className = 'legend-item';
+                            item.innerHTML = `
+                                <div class="legend-color" style="background: ${symbologyOptions.nivel[key]};"></div>
+                                <span>${key}</span>
+                            `;
+                            legendDiv.appendChild(item);
+                        });
+                    } else if (symbologyType === 'clase') {
+                        Object.keys(symbologyOptions.clase).forEach(key => {
+                            const item = document.createElement('div');
+                            item.className = 'legend-item';
+                            item.innerHTML = `
+                                <div class="legend-color" style="background: ${symbologyOptions.clase[key]};"></div>
+                                <span>${key}</span>
+                            `;
+                            legendDiv.appendChild(item);
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Función para actualizar contador de capas
+        function updateLayerCount() {
+            const activeLayersCount = Object.keys(dataLayers).filter(id => 
+                map.hasLayer(dataLayers[id])
+            ).length;
+            document.getElementById('layerCount').textContent = activeLayersCount;
+        }
+        
+        // Función para mostrar/ocultar loading
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // Función para mostrar/ocultar estadísticas
+        function toggleStatistics() {
+            const panel = document.getElementById('statisticsPanel');
+            const map = document.getElementById('map');
+            
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                map.style.height = '70%';
+                initializeCharts();
+            } else {
+                panel.style.display = 'none';
+                map.style.height = '100%';
+            }
+            
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
+        }
+        
+        // Función para mostrar tabs de gráficos
+        function showChartTab(tabName) {
+            document.querySelectorAll('.chart-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.chart-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-content`).classList.add('active');
+        }
+        
+        // Función para mostrar estadísticas de capa
+        function showLayerStats(layerId) {
+            toggleStatistics();
+            showChartTab('overview');
+            updateStatsForLayer(layerId);
+        }
+        
+        // Función para actualizar estadísticas de capa específica
+        function updateStatsForLayer(layerId) {
+            // Simular datos específicos para la capa
+            const layerStats = {
+                totalArea: Math.floor(Math.random() * 2000) + 500,
+                vegetationArea: Math.floor(Math.random() * 1500) + 300,
+                waterArea: Math.floor(Math.random() * 300) + 50,
+                erosionRate: (Math.random() * 5 - 2.5).toFixed(1)
+            };
+            
+            document.getElementById('totalArea').textContent = layerStats.totalArea;
+            document.getElementById('vegetationArea').textContent = layerStats.vegetationArea;
+            document.getElementById('waterArea').textContent = layerStats.waterArea;
+            document.getElementById('erosionRate').textContent = layerStats.erosionRate + '%';
+        }
+        
+        // Función para inicializar gráficos
+        function initializeCharts() {
+            // Gráfico de cobertura (pie chart)
+            if (!charts.coverage) {
+                const ctx1 = document.getElementById('coverageChart').getContext('2d');
+                charts.coverage = new Chart(ctx1, {
+                    type: 'pie',
+                    data: statisticsData.coverage,
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Gráfico temporal (line chart)
+            if (!charts.temporal) {
+                const ctx2 = document.getElementById('temporalChart').getContext('2d');
+                charts.temporal = new Chart(ctx2, {
+                    type: 'line',
+                    data: statisticsData.temporal,
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Gráfico de índices espectrales
+            if (!charts.indices) {
+                const ctx3 = document.getElementById('indicesChart').getContext('2d');
+                charts.indices = new Chart(ctx3, {
+                    type: 'line',
+                    data: statisticsData.indices,
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                min: 0,
+                                max: 1
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                min: 0,
+                                max: 0.5,
+                                grid: {
+                                    drawOnChartArea: false,
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Gráfico de comparación
+            if (!charts.comparison) {
+                const ctx4 = document.getElementById('comparisonChart').getContext('2d');
+                charts.comparison = new Chart(ctx4, {
+                    type: 'bar',
+                    data: {
+                        labels: ['2020 vs 2024', 'Bosque', 'Agua', 'Suelo Desnudo'],
+                        datasets: [{
+                            label: '2020',
+                            data: [78.5, 8.2, 13.3],
+                            backgroundColor: 'rgba(52, 152, 219, 0.8)'
+                        }, {
+                            label: '2024',
+                            data: [69.3, 14.7, 16.0],
+                            backgroundColor: 'rgba(231, 76, 60, 0.8)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Matriz de cambios
+            if (!charts.changeMatrix) {
+                const ctx5 = document.getElementById('changeMatrix').getContext('2d');
+                charts.changeMatrix = new Chart(ctx5, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Bosque → Agua', 'Bosque → Suelo', 'Agua → Suelo', 'Regeneración'],
+                        datasets: [{
+                            label: 'Cambio (%)',
+                            data: [5.2, 8.7, 2.1, 3.4],
+                            backgroundColor: ['#e74c3c', '#d35400', '#f39c12', '#27ae60']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        indexAxis: 'y'
+                    }
+                });
+            }
+            
+            // Histograma
+            if (!charts.histogram) {
+                const ctx6 = document.getElementById('histogramChart').getContext('2d');
+                charts.histogram = new Chart(ctx6, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-0.2', '0.2-0.4', '0.4-0.6', '0.6-0.8', '0.8-1.0'],
+                        datasets: [{
+                            label: 'Frecuencia NDVI',
+                            data: [5, 15, 35, 30, 15],
+                            backgroundColor: 'rgba(39, 174, 96, 0.7)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Distribución NDVI'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Gráfico de correlación
+            if (!charts.correlation) {
+                const ctx7 = document.getElementById('correlationChart').getContext('2d');
+                charts.correlation = new Chart(ctx7, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'NDVI vs NDWI',
+                            data: [
+                                {x: 0.2, y: 0.8}, {x: 0.3, y: 0.7}, {x: 0.4, y: 0.6},
+                                {x: 0.5, y: 0.5}, {x: 0.6, y: 0.4}, {x: 0.7, y: 0.3},
+                                {x: 0.8, y: 0.2}, {x: 0.9, y: 0.1}
+                            ],
+                            backgroundColor: 'rgba(52, 152, 219, 0.6)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'NDVI'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'NDWI'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Correlación de Índices'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Gráfico de áreas de riesgo
+            if (!charts.risk) {
+                const ctx8 = document.getElementById('riskChart').getContext('2d');
+                charts.risk = new Chart(ctx8, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Riesgo Alto', 'Riesgo Medio', 'Riesgo Bajo', 'Sin Riesgo'],
+                        datasets: [{
+                            data: [15, 25, 35, 25],
+                            backgroundColor: [
+                                '#e74c3c',
+                                '#f39c12',
+                                '#f1c40f',
+                                '#27ae60'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Clasificación de Riesgo de Erosión'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Event listeners para checkboxes
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                toggleLayer(this.id);
+            });
+        });
+        
+        // Event listeners para botones de años
+        document.querySelectorAll('.btn-year').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('.btn-year').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                activeYear = this.dataset.year;
+                
+                if (activeYear === 'comparar') {
+                    // Activar modo comparación
+                    showComparisonMode();
+                } else {
+                    // Mostrar datos del año seleccionado
+                    updateLayersForYear(activeYear);
+                }
+            });
+        });
+        
+        // Función para mostrar modo comparación
+        function showComparisonMode() {
+            // Mostrar panel de estadísticas automáticamente
+            if (document.getElementById('statisticsPanel').style.display === 'none') {
+                toggleStatistics();
+            }
+            showChartTab('comparison');
+            
+            // Actualizar estadísticas para comparación
+            updateComparisonStats();
+        }
+        
+        // Función para actualizar capas por año
+        function updateLayersForYear(year) {
+            // Activar automáticamente las capas del año seleccionado
+            const yearLayers = Object.keys(dataLayers).filter(id => id.includes(year));
+            
+            yearLayers.forEach(layerId => {
+                const checkbox = document.getElementById(layerId);
+                if (checkbox && !checkbox.checked) {
+                    checkbox.checked = true;
+                    toggleLayer(layerId);
+                }
+            });
+        }
+        
+        // Función para actualizar estadísticas de comparación
+        function updateComparisonStats() {
+            const comparisonData = {
+                totalArea: 1250,
+                vegetationLoss: -9.2,
+                waterIncrease: 6.5,
+                erosionAcceleration: 2.3
+            };
+            
+            document.getElementById('totalArea').textContent = comparisonData.totalArea;
+            document.getElementById('vegetationArea').textContent = comparisonData.vegetationLoss + '%';
+            document.getElementById('waterArea').textContent = '+' + comparisonData.waterIncrease + '%';
+            document.getElementById('erosionRate').textContent = comparisonData.erosionAcceleration + 'x';
+        }
+        
+        // Mostrar coordenadas del mouse
+        map.on('mousemove', function(e) {
+            const lat = e.latlng.lat.toFixed(4);
+            const lng = e.latlng.lng.toFixed(4);
+            document.getElementById('coordinates').innerHTML = 
+                `<i class="fas fa-crosshairs"></i> Coordenadas: ${lat}, ${lng}`;
+        });
+        
+        // Event listener para click en el mapa (análisis puntual)
+        map.on('click', function(e) {
+            const lat = e.latlng.lat.toFixed(4);
+            const lng = e.latlng.lng.toFixed(4);
+            
+            // Simular análisis puntual
+            const pointAnalysis = {
+                ndvi: (Math.random() * 0.8 + 0.1).toFixed(3),
+                ndwi: (Math.random() * 0.4 + 0.1).toFixed(3),
+                cobertura: ['Bosque Denso', 'Bosque Fragmentado', 'Agua', 'Suelo Desnudo'][Math.floor(Math.random() * 4)],
+                riesgo: ['Alto', 'Medio', 'Bajo'][Math.floor(Math.random() * 3)]
+            };
+            
+            const popup = L.popup()
+                .setLatLng(e.latlng)
+                .setContent(`
+                    <strong>Análisis Puntual</strong><br>
+                    <strong>Coordenadas:</strong> ${lat}, ${lng}<br>
+                    <strong>NDVI:</strong> ${pointAnalysis.ndvi}<br>
+                    <strong>NDWI:</strong> ${pointAnalysis.ndwi}<br>
+                    <strong>Cobertura:</strong> ${pointAnalysis.cobertura}<br>
+                    <strong>Riesgo:</strong> ${pointAnalysis.riesgo}<br>
+                    <hr>
+                    <small><i class="fas fa-info-circle"></i> Datos simulados</small>
+                `)
+                .openOn(map);
+        });
+        
+        // Inicializar capas por defecto
+        setTimeout(() => {
+            toggleLayer('aoi');
+            toggleLayer('sector');
+        }, 1000);
+        
+        // Controles adicionales del mapa
+        map.addControl(new L.Control.Scale());
+        
+        // Control de medición (simulado)
+        const measureControl = L.control({position: 'topright'});
+        measureControl.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = '<a href="#" title="Herramientas de Medición"><i class="fas fa-ruler"></i></a>';
+            div.style.backgroundColor = 'white';
+            div.style.padding = '5px';
+            div.style.borderRadius = '3px';
+            
+            L.DomEvent.on(div, 'click', function(e) {
+                L.DomEvent.stopPropagation(e);
+                alert('Herramienta de medición - Funcionalidad a implementar');
+            });
+            
+            return div;
+        };
+        measureControl.addTo(map);
+        
+        // Control de exportación (simulado)
+        const exportControl = L.control({position: 'topright'});
+        exportControl.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = '<a href="#" title="Exportar Datos"><i class="fas fa-download"></i></a>';
+            div.style.backgroundColor = 'white';
+            div.style.padding = '5px';
+            div.style.borderRadius = '3px';
+            div.style.marginTop = '5px';
+            
+            L.DomEvent.on(div, 'click', function(e) {
+                L.DomEvent.stopPropagation(e);
+                exportData();
+            });
+            
+            return div;
+        };
+        exportControl.addTo(map);
+        
+        // Función para exportar datos
+        function exportData() {
+            const exportOptions = [
+                'Exportar Estadísticas (CSV)',
+                'Exportar Mapa (PNG)',
+                'Exportar Capas (GeoJSON)',
+                'Generar Reporte (PDF)'
+            ];
+            
+            const choice = prompt('Seleccione el tipo de exportación:\n\n' + 
+                exportOptions.map((opt, i) => `${i + 1}. ${opt}`).join('\n'));
+            
+            if (choice && choice >= 1 && choice <= 4) {
+                showLoading();
+                setTimeout(() => {
+                    hideLoading();
+                    alert(`Exportando: ${exportOptions[choice - 1]}\n\nEsta funcionalidad se implementaría con APIs del servidor.`);
+                }, 2000);
+            }
+        }
+        
+        // Función para ajustar la visualización automáticamente
+        function fitMapToData() {
+            if (Object.keys(dataLayers).length > 0) {
+                const group = new L.featureGroup(Object.values(dataLayers));
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+        
+        // Mensaje de bienvenida
+        setTimeout(() => {
+            L.popup()
+                .setLatLng([-0.5, -77.0])
+                .setContent(`
+                    <div style="text-align: center;">
+                        <h6><i class="fas fa-map-marked-alt"></i> ¡Bienvenido!</h6>
+                        <p>Geoportal de Erosión Regresiva del Río Coca</p>
+                        <small>
+                            <i class="fas fa-mouse-pointer"></i> Haz clic en el mapa para análisis puntual<br>
+                            <i class="fas fa-chart-bar"></i> Usa los botones de estadísticas para análisis detallado<br>
+                            <i class="fas fa-layer-group"></i> Personaliza la simbología de cada capa
+                        </small>
+                    </div>
+                `)
+                .openOn(map);
+        }, 3000);
+        
+        // Actualización automática de estadísticas cada 30 segundos (simulado)
+        setInterval(() => {
+            if (document.getElementById('statisticsPanel').style.display !== 'none') {
+                // Simular actualización de datos en tiempo real
+                const newErosionRate = (Math.random() * 5 - 2.5).toFixed(1);
+                document.getElementById('erosionRate').textContent = newErosionRate + '%';
+            }
+        }, 30000);
+        
+        // Función para redimensionar gráficos cuando cambia el tamaño de ventana
+        window.addEventListener('resize', () => {
+            Object.values(charts).forEach(chart => {
+                if (chart) {
+                    chart.resize();
+                }
+            });
+        });
+        
+        // Función para limpiar recursos al cerrar
+        window.addEventListener('beforeunload', () => {
+            Object.values(charts).forEach(chart => {
+                if (chart) {
+                    chart.destroy();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
