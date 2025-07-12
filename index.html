@@ -1,4 +1,301 @@
-<!DOCTYPE html>
+// Función para cargar datos reales de una capa
+        async function loadLayerData(layerId) {
+            try {
+                // Verificar caché primero
+                if (layerCache.has(layerId)) {
+                    return layerCache.get(layerId);
+                }
+                
+                showLoading();
+                
+                // Mapear IDs de capas a nombres de tablas
+                const tableMapping = {
+                    'aoi': 'AOI',
+                    'sector': 'Sector',
+                    'cob2020': 'COB2020_02',
+                    'cob2021': 'COB2021_07',
+                    'cob2022': 'COB2022_09',
+                    'cob2023': 'COB2023_09',
+                    'cob2024': 'COB2024_08',
+                    'ndvi2020': 'NDVI_2020_02',
+                    'ndvi2024': 'NDVI_2024_08',
+                    'ndwi2020': 'NDWI_2020_02',
+                    'ndwi2024': 'NDWI_2024_08',
+                    'ndoai2020': 'NDOAI_2020_02',
+                    'ndoai2024': 'NDOAI_2024_08'
+                };
+                
+                const tableName = tableMapping[layerId];
+                if (!tableName) {
+                    throw new Error(`Tabla no encontrada para capa: ${layerId}`);
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/layers/${tableName}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+                }
+                
+                const geoJSON = await response.json();
+                
+                // Guardar en caché
+                layerCache.set(layerId, geoJSON);
+                
+                return geoJSON;
+                
+            } catch (error) {
+                console.error('Error cargando datos de capa:', error);
+                
+                // Mostrar mensaje de error al usuario
+                const errorMsg = error.message.includes('Failed to fetch') 
+                    ? 'No se puede conectar con el servidor. Verifica que la API esté funcionando.'
+                    : `Error al cargar datos de ${layerId}: ${error.message}`;
+                
+                alert(errorMsg);
+                
+                // Retornar datos de ejemplo en caso de error (opcional)
+                return generateFallbackData(layerId);
+                
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Función para generar datos de respaldo en caso de error
+        function generateFallbackData(layerId) {
+            console.warn(`Usando datos de respaldo para: ${layerId}`);
+            return {
+                type: 'FeatureCollection',
+                features: generateSampleFeatures(layerId)
+            };
+        }
+        
+        // Función para crear capa con datos reales
+        async function createLayerWithRealData(layerId, symbologyType = 'uniform') {
+            const geoJSONData = await loadLayerData(layerId);
+            
+            if (!geoJSONData || !geoJSONData.features) {
+                console.error('No se pudieron cargar datos para:', layerId);
+                return null;
+            }
+            
+            const layerGroup = L.geoJSON(geoJSONData, {
+                style: function(feature) {
+                    const color = getFeatureColor(feature, symbologyType, layerId);
+                    return {
+                        fillColor: color,
+                        color: color,
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.7
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.bindPopup(createPopupContent(feature, layerId));
+                    
+                    // Añadir eventos de hover
+                    layer.on('mouseover', function(e) {
+                        this.setStyle({
+                            weight: 3,
+                            fillOpacity: 0.9
+                        });
+                    });
+                    
+                    layer.on('mouseout', function(e) {
+                        this.setStyle({
+                            weight: 2,
+                            fillOpacity: 0.7
+                        });
+                    });
+                }
+            });
+            
+            return layerGroup;
+        }
+        
+        // Función para cargar estadísticas reales de una capa
+        async function loadLayerStatistics(layerId) {
+            try {
+                const tableMapping = {
+                    'aoi': 'AOI',
+                    'sector': 'Sector',
+                    'cob2020': 'COB2020_02',
+                    'cob2021': 'COB2021_07',
+                    'cob2022': 'COB2022_09',
+                    'cob2023': 'COB2023_09',
+                    'cob2024': 'COB2024_08',
+                    'ndvi2020': 'NDVI_2020_02',
+                    'ndvi2024': 'NDVI_2024_08',
+                    'ndwi2020': 'NDWI_2020_02',
+                    'ndwi2024': 'NDWI_2024_08',
+                    'ndoai2020': 'NDOAI_2020_02',
+                    'ndoai2024': 'NDOAI_2024_08'
+                };
+                
+                const tableName = tableMapping[layerId];
+                if (!tableName) return;
+                
+                const response = await fetch(`${API_BASE_URL}/layers/${tableName}/statistics`);
+                
+                if (response.ok) {
+                    const stats = await response.json();
+                    updateChartsWithRealData(layerId, stats);
+                    updateStatsCardsWithRealData(stats);
+                }
+                
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+            }
+        }
+        
+        // Función para actualizar gráficos con datos reales
+        function updateChartsWithRealData(layerId, stats) {
+            if (stats.tipo === 'cobertura' && charts.coverage) {
+                const labels = stats.distribucion.map(item => item.nivel);
+                const data = stats.distribucion.map(item => parseFloat(item.area_ha));
+                const colors = labels.map(label => symbologyOptions.nivel[label] || '#666666');
+                
+                charts.coverage.data.labels = labels;
+                charts.coverage.data.datasets[0].data = data;
+                charts.coverage.data.datasets[0].backgroundColor = colors;
+                charts.coverage.update();
+            }
+            
+            if (stats.tipo === 'indice_espectral' && charts.histogram) {
+                const labels = stats.distribucion.map(item => item.clase);
+                const data = stats.distribucion.map(item => parseInt(item.cantidad));
+                
+                charts.histogram.data.labels = labels;
+                charts.histogram.data.datasets[0].data = data;
+                charts.histogram.update();
+            }
+        }
+        
+        // Función para actualizar tarjetas de estadísticas
+        function updateStatsCardsWithRealData(stats) {
+            if (stats.tipo === 'cobertura') {
+                document.getElementById('totalArea').textContent = Math.round(stats.total_area);
+                
+                const vegetacion = stats.distribucion.filter(item => 
+                    item.nivel.includes('Bosque') || item.nivel.includes('Vegetación')
+                ).reduce((sum, item) => sum + parseFloat(item.area_ha), 0);
+                
+                const agua = stats.distribucion.filter(item => 
+                    item.nivel.includes('Agua')
+                ).reduce((sum, item) => sum + parseFloat(item.area_ha), 0);
+                
+                document.getElementById('vegetationArea').textContent = Math.round(vegetacion);
+                document.getElementById('waterArea').textContent = Math.round(agua);
+            }
+        }
+        
+        // Función para análisis puntual real
+        async function performPointAnalysis(lat, lng) {
+            try {
+                const activeLayers = Object.keys(dataLayers).filter(id => 
+                    map.hasLayer(dataLayers[id])
+                );
+                
+                if (activeLayers.length === 0) {
+                    return { error: 'No hay capas activas para analizar' };
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/analysis/point`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        lat: lat,
+                        lng: lng,
+                        layers: activeLayers.map(id => {
+                            const tableMapping = {
+                                'aoi': 'AOI',
+                                'sector': 'Sector',
+                                'cob2020': 'COB2020_02',
+                                'cob2021': 'COB2021_07',
+                                'cob2022': 'COB2022_09',
+                                'cob2023': 'COB2023_09',
+                                'cob2024': 'COB2024_08',
+                                'ndvi2020': 'NDVI_2020_02',
+                                'ndvi2024': 'NDVI_2024_08',
+                                'ndwi2020': 'NDWI_2020_02',
+                                'ndwi2024': 'NDWI_2024_08',
+                                'ndoai2020': 'NDOAI_2020_02',
+                                'ndoai2024': 'NDOAI_2024_08'
+                            };
+                            return tableMapping[id];
+                        }).filter(Boolean)
+                    })
+                });
+                
+                if (response.ok) {
+                    return await response.json();
+                } else {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                console.error('Error en análisis puntual:', error);
+                return { error: error.message };
+            }
+        }
+        
+        // Función para cargar análisis temporal real
+        async function loadTemporalAnalysis(indicator = 'cobertura') {
+            try {
+                showLoading();
+                
+                const response = await fetch(`${API_BASE_URL}/analysis/temporal?indicator=${indicator}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Actualizar gráfico temporal con datos reales
+                    if (charts.temporal && data.labels && data.datasets) {
+                        charts.temporal.data.labels = data.labels;
+                        charts.temporal.data.datasets = data.datasets.map(dataset => ({
+                            ...dataset,
+                            borderColor: dataset.borderColor || getRandomColor(),
+                            backgroundColor: dataset.backgroundColor || getRandomColor(0.1),
+                            fill: false
+                        }));
+                        charts.temporal.update();
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error cargando análisis temporal:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Función para generar colores aleatorios
+        function getRandomColor(alpha = 1) {
+            const colors = [
+                '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+                '#1abc9c', '#34495e', '#e67e22', '#95a5a6', '#16a085'
+            ];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            if (alpha < 1) {
+                const rgb = hexToRgb(color);
+                return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+            }
+            return color;
+        }
+        
+        // Función para convertir hex a RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+                            <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -923,28 +1220,81 @@
             }
         };
         
-        // Función para crear capas con simbología
-        function createLayerWithSymbology(layerId, data, symbologyType = 'uniform') {
-            const features = generateSampleFeatures(layerId);
-            const layerGroup = L.layerGroup();
+        // Función modificada para crear capas con simbología usando datos reales
+        async function createLayerWithSymbology(layerId, data, symbologyType = 'uniform') {
+            return await createLayerWithRealData(layerId, symbologyType);
+        }
+        
+        // Función modificada para mostrar/ocultar capas con datos reales
+        async function toggleLayer(layerId) {
+            const checkbox = document.getElementById(layerId);
+            const symbologyDiv = document.getElementById(`${layerId}-symbology`);
             
-            features.forEach(feature => {
-                const color = getFeatureColor(feature, symbologyType, layerId);
-                const layer = L.geoJSON(feature, {
-                    style: {
-                        fillColor: color,
-                        color: color,
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.7
-                    }
-                });
+            if (checkbox.checked) {
+                symbologyDiv.classList.add('active');
                 
-                layer.bindPopup(createPopupContent(feature, layerId));
-                layerGroup.addLayer(layer);
-            });
+                if (!dataLayers[layerId]) {
+                    const symbologyType = symbologyConfig[layerId] || 'uniform';
+                    dataLayers[layerId] = await createLayerWithRealData(layerId, symbologyType);
+                    
+                    if (dataLayers[layerId]) {
+                        dataLayers[layerId].addTo(map);
+                        updateLayerCount();
+                        updateDynamicLegend();
+                        
+                        // Cargar estadísticas reales de la capa
+                        await loadLayerStatistics(layerId);
+                        
+                        // Ajustar vista del mapa a los datos cargados
+                        if (Object.keys(dataLayers).length === 1) {
+                            fitMapToActiveLayer(layerId);
+                        }
+                    }
+                } else {
+                    dataLayers[layerId].addTo(map);
+                    updateLayerCount();
+                    updateDynamicLegend();
+                }
+            } else {
+                symbologyDiv.classList.remove('active');
+                if (dataLayers[layerId]) {
+                    map.removeLayer(dataLayers[layerId]);
+                    updateLayerCount();
+                    updateDynamicLegend();
+                }
+            }
+        }
+        
+        // Función para ajustar vista del mapa a una capa específica
+        function fitMapToActiveLayer(layerId) {
+            if (dataLayers[layerId] && map.hasLayer(dataLayers[layerId])) {
+                try {
+                    const bounds = dataLayers[layerId].getBounds();
+                    if (bounds.isValid()) {
+                        map.fitBounds(bounds, { padding: [20, 20] });
+                    }
+                } catch (error) {
+                    console.warn('No se pudo ajustar la vista del mapa:', error);
+                }
+            }
+        }
+        
+        // Función para actualizar simbología con recarga de datos
+        async function updateSymbology(layerId, symbologyType) {
+            symbologyConfig[layerId] = symbologyType;
             
-            return layerGroup;
+            if (dataLayers[layerId] && map.hasLayer(dataLayers[layerId])) {
+                // Remover capa actual
+                map.removeLayer(dataLayers[layerId]);
+                
+                // Recrear con nueva simbología
+                dataLayers[layerId] = await createLayerWithRealData(layerId, symbologyType);
+                
+                if (dataLayers[layerId]) {
+                    dataLayers[layerId].addTo(map);
+                    updateDynamicLegend();
+                }
+            }
         }
         
         // Función para generar características de muestra
@@ -1088,17 +1438,49 @@
             return Math.abs(hash);
         }
         
-        // Función para crear contenido de popup
+        // Función para crear contenido de popup con datos reales
         function createPopupContent(feature, layerId) {
             const props = feature.properties;
-            let content = `<strong>${layerId.toUpperCase()}</strong><br>`;
+            let content = `<div style="max-width: 250px;">`;
+            content += `<h6 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px;">`;
+            content += `<i class="fas fa-info-circle"></i> ${layerId.toUpperCase()}</h6>`;
             
+            // Formatear propiedades según el tipo de capa
             Object.keys(props).forEach(key => {
-                if (key !== 'id') {
-                    content += `<strong>${key}:</strong> ${props[key]}<br>`;
+                if (key !== 'id' && props[key] !== null && props[key] !== undefined) {
+                    let value = props[key];
+                    let label = key;
+                    
+                    // Formatear etiquetas
+                    switch(key) {
+                        case 'objectid': label = 'ID Objeto'; break;
+                        case 'txt': label = 'Descripción'; break;
+                        case 'area': label = 'Área (ha)'; value = parseFloat(value).toFixed(2); break;
+                        case 'shape_le_1': label = 'Perímetro'; value = parseFloat(value).toFixed(2); break;
+                        case 'shape_area': label = 'Área Shape'; value = parseFloat(value).toFixed(2); break;
+                        case 'observa': label = 'Observaciones'; break;
+                        case 'name': label = 'Nombre'; break;
+                        case 'nivel': label = 'Nivel de Cobertura'; break;
+                        case 'clase': label = 'Clasificación'; break;
+                        case 'dn': label = 'Valor Digital'; break;
+                    }
+                    
+                    content += `<div style="margin: 5px 0;">`;
+                    content += `<strong>${label}:</strong> ${value}`;
+                    content += `</div>`;
                 }
             });
             
+            // Añadir información adicional basada en el tipo de capa
+            if (layerId.includes('ndvi')) {
+                content += `<hr style="margin: 10px 0;"><small><i class="fas fa-leaf"></i> NDVI: Índice de Vegetación</small>`;
+            } else if (layerId.includes('ndwi')) {
+                content += `<hr style="margin: 10px 0;"><small><i class="fas fa-tint"></i> NDWI: Índice de Agua</small>`;
+            } else if (layerId.includes('ndoai')) {
+                content += `<hr style="margin: 10px 0;"><small><i class="fas fa-water"></i> NDOAI: Índice de Agua/Sedimentos</small>`;
+            }
+            
+            content += `</div>`;
             return content;
         }
         
@@ -1545,39 +1927,338 @@
                 `<i class="fas fa-crosshairs"></i> Coordenadas: ${lat}, ${lng}`;
         });
         
-        // Event listener para click en el mapa (análisis puntual)
-        map.on('click', function(e) {
-            const lat = e.latlng.lat.toFixed(4);
-            const lng = e.latlng.lng.toFixed(4);
+        // Event listener modificado para click en el mapa con análisis real
+        map.on('click', async function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
             
-            // Simular análisis puntual
-            const pointAnalysis = {
-                ndvi: (Math.random() * 0.8 + 0.1).toFixed(3),
-                ndwi: (Math.random() * 0.4 + 0.1).toFixed(3),
-                cobertura: ['Bosque Denso', 'Bosque Fragmentado', 'Agua', 'Suelo Desnudo'][Math.floor(Math.random() * 4)],
-                riesgo: ['Alto', 'Medio', 'Bajo'][Math.floor(Math.random() * 3)]
-            };
-            
-            const popup = L.popup()
+            // Mostrar loading mientras se realiza el análisis
+            const loadingPopup = L.popup()
                 .setLatLng(e.latlng)
-                .setContent(`
-                    <strong>Análisis Puntual</strong><br>
-                    <strong>Coordenadas:</strong> ${lat}, ${lng}<br>
-                    <strong>NDVI:</strong> ${pointAnalysis.ndvi}<br>
-                    <strong>NDWI:</strong> ${pointAnalysis.ndwi}<br>
-                    <strong>Cobertura:</strong> ${pointAnalysis.cobertura}<br>
-                    <strong>Riesgo:</strong> ${pointAnalysis.riesgo}<br>
-                    <hr>
-                    <small><i class="fas fa-info-circle"></i> Datos simulados</small>
-                `)
+                .setContent('<div style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Analizando...</div>')
+                .openOn(map);
+            
+            const analysis = await performPointAnalysis(lat, lng);
+            
+            let content = `<div style="max-width: 300px;">`;
+            content += `<h6 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px;">`;
+            content += `<i class="fas fa-crosshairs"></i> Análisis Puntual</h6>`;
+            content += `<div style="margin-bottom: 10px; font-size: 0.9em; color: #666;">`;
+            content += `<strong>Coordenadas:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}</div>`;
+            content += `<hr style="margin: 10px 0;">`;
+            
+            if (analysis.error) {
+                content += `<div style="color: #e74c3c; text-align: center;">`;
+                content += `<i class="fas fa-exclamation-triangle"></i> ${analysis.error}</div>`;
+            } else if (Object.keys(analysis).length > 0) {
+                Object.keys(analysis).forEach(tableName => {
+                    const data = analysis[tableName];
+                    const layerName = getLayerDisplayName(tableName);
+                    
+                    content += `<div style="margin-bottom: 15px; padding: 8px; background: #f8f9fa; border-radius: 5px;">`;
+                    content += `<strong style="color: #2c3e50;">${layerName}:</strong><br>`;
+                    
+                    Object.keys(data).forEach(key => {
+                        if (key !== 'id') {
+                            let value = data[key];
+                            let label = formatFieldLabel(key);
+                            
+                            // Formatear valores específicos
+                            if (key === 'area' && typeof value === 'number') {
+                                value = value.toFixed(2) + ' ha';
+                            } else if (key === 'dn' && typeof value === 'number') {
+                                value = `${value} (${getIndexInterpretation(tableName, value)})`;
+                            }
+                            
+                            content += `<div style="margin: 3px 0; font-size: 0.9em;">`;
+                            content += `&nbsp;&nbsp;<strong>${label}:</strong> ${value}</div>`;
+                        }
+                    });
+                    content += `</div>`;
+                });
+            } else {
+                content += `<div style="text-align: center; color: #666; font-style: italic;">`;
+                content += `<i class="fas fa-search"></i> No hay datos disponibles en esta ubicación</div>`;
+            }
+            
+            content += `<hr style="margin: 10px 0;">`;
+            content += `<div style="text-align: center; font-size: 0.8em; color: #666;">`;
+            content += `<i class="fas fa-clock"></i> Análisis realizado: ${new Date().toLocaleTimeString()}`;
+            content += `</div></div>`;
+            
+            L.popup()
+                .setLatLng(e.latlng)
+                .setContent(content)
                 .openOn(map);
         });
         
-        // Inicializar capas por defecto
-        setTimeout(() => {
-            toggleLayer('aoi');
-            toggleLayer('sector');
-        }, 1000);
+        // Función para obtener nombre de display de la capa
+        function getLayerDisplayName(tableName) {
+            const nameMapping = {
+                'AOI': 'Área de Interés',
+                'Sector': 'Sectores',
+                'COB2020_02': 'Cobertura 2020-02',
+                'COB2021_07': 'Cobertura 2021-07',
+                'COB2022_09': 'Cobertura 2022-09',
+                'COB2023_09': 'Cobertura 2023-09',
+                'COB2024_08': 'Cobertura 2024-08',
+                'NDVI_2020_02': 'NDVI 2020',
+                'NDVI_2024_08': 'NDVI 2024',
+                'NDWI_2020_02': 'NDWI 2020',
+                'NDWI_2024_08': 'NDWI 2024',
+                'NDOAI_2020_02': 'NDOAI 2020',
+                'NDOAI_2024_08': 'NDOAI 2024'
+            };
+            return nameMapping[tableName] || tableName;
+        }
+        
+        // Función para formatear etiquetas de campos
+        function formatFieldLabel(fieldName) {
+            const labelMapping = {
+                'txt': 'Descripción',
+                'area': 'Área',
+                'observa': 'Observaciones',
+                'name': 'Nombre',
+                'nivel': 'Nivel de Cobertura',
+                'clase': 'Clasificación',
+                'dn': 'Valor Digital',
+                'objectid': 'ID Objeto',
+                'shape_le_1': 'Perímetro',
+                'shape_area': 'Área Shape'
+            };
+            return labelMapping[fieldName] || fieldName;
+        }
+        
+        // Función para interpretar valores de índices
+        function getIndexInterpretation(tableName, value) {
+            if (tableName.includes('NDVI')) {
+                const normalizedValue = value / 255; // Asumiendo que DN está en 0-255
+                if (normalizedValue > 0.7) return 'Vegetación muy densa';
+                if (normalizedValue > 0.5) return 'Vegetación densa';
+                if (normalizedValue > 0.3) return 'Vegetación moderada';
+                if (normalizedValue > 0.1) return 'Vegetación escasa';
+                return 'Sin vegetación';
+            } else if (tableName.includes('NDWI')) {
+                const normalizedValue = (value - 127.5) / 127.5; // Asumiendo DN centrado en 127.5
+                if (normalizedValue > 0.3) return 'Agua/Muy húmedo';
+                if (normalizedValue > 0.1) return 'Húmedo';
+                if (normalizedValue > -0.1) return 'Moderadamente húmedo';
+                return 'Seco';
+            }
+            return 'Valor normal';
+        }
+        
+        // Función para limpiar caché (útil para desarrollo)
+        function clearLayerCache() {
+            layerCache.clear();
+            console.log('Caché de capas limpiado');
+        }
+        
+        // Función para precargar capas importantes
+        async function preloadImportantLayers() {
+            const importantLayers = ['aoi', 'sector'];
+            
+            for (const layerId of importantLayers) {
+                try {
+                    await loadLayerData(layerId);
+                    console.log(`Precargada capa: ${layerId}`);
+                } catch (error) {
+                    console.warn(`No se pudo precargar: ${layerId}`, error);
+                }
+            }
+        }
+        
+        // Función para mostrar estado de conectividad
+        function checkAPIConnection() {
+            return fetch(`${API_BASE_URL}/health`)
+                .then(response => {
+                    if (response.ok) {
+                        console.log('✅ Conexión con API exitosa');
+                        return true;
+                    } else {
+                        console.warn('⚠️ API responde pero con errores');
+                        return false;
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ No se puede conectar con la API:', error);
+                    return false;
+                });
+        }
+        
+        // Inicialización modificada para usar datos reales
+        async function initializeGeoportal() {
+            // Verificar conexión con API
+            const isConnected = await checkAPIConnection();
+            
+            if (isConnected) {
+                console.log('🚀 Inicializando geoportal con datos reales...');
+                
+                // Precargar capas importantes
+                await preloadImportantLayers();
+                
+                // Cargar capas por defecto
+                setTimeout(async () => {
+                    await toggleLayer('aoi');
+                    await toggleLayer('sector');
+                    
+                    // Cargar análisis temporal inicial
+                    await loadTemporalAnalysis('cobertura');
+                }, 1000);
+                
+            } else {
+                console.warn('⚠️ Iniciando en modo offline con datos de ejemplo');
+                
+                // Usar datos de ejemplo si no hay conexión
+                setTimeout(() => {
+                    toggleLayer('aoi');
+                    toggleLayer('sector');
+                }, 1000);
+                
+                // Mostrar mensaje al usuario
+                setTimeout(() => {
+                    L.popup()
+                        .setLatLng([-0.5, -77.0])
+                        .setContent(`
+                            <div style="text-align: center; color: #e67e22;">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Modo Offline</h6>
+                                <p>No se puede conectar con el servidor.<br>
+                                Mostrando datos de ejemplo.</p>
+                                <small>Verifica la conexión y recarga la página.</small>
+                            </div>
+                        `)
+                        .openOn(map);
+                }, 3000);
+            }
+        }
+        
+        // Función modificada para mostrar estadísticas de capa con datos reales
+        async function showLayerStats(layerId) {
+            if (!toggleStatistics || document.getElementById('statisticsPanel').style.display === 'none') {
+                toggleStatistics();
+            }
+            
+            showChartTab('overview');
+            
+            // Cargar estadísticas reales si la capa está activa
+            if (dataLayers[layerId] && map.hasLayer(dataLayers[layerId])) {
+                await loadLayerStatistics(layerId);
+            } else {
+                // Activar la capa primero
+                const checkbox = document.getElementById(layerId);
+                if (checkbox && !checkbox.checked) {
+                    checkbox.checked = true;
+                    await toggleLayer(layerId);
+                }
+            }
+        }
+        
+        // Event listeners modificados para años con carga de datos reales
+        document.querySelectorAll('.btn-year').forEach(button => {
+            button.addEventListener('click', async function() {
+                document.querySelectorAll('.btn-year').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                activeYear = this.dataset.year;
+                
+                if (activeYear === 'comparar') {
+                    await showComparisonMode();
+                } else {
+                    await updateLayersForYear(activeYear);
+                    await loadTemporalAnalysis('cobertura');
+                }
+            });
+        });
+        
+        // Función modificada para modo comparación con datos reales
+        async function showComparisonMode() {
+            // Mostrar panel de estadísticas automáticamente
+            if (document.getElementById('statisticsPanel').style.display === 'none') {
+                toggleStatistics();
+            }
+            showChartTab('comparison');
+            
+            // Cargar datos de comparación real
+            try {
+                showLoading();
+                
+                // Activar capas de años relevantes para comparación
+                const comparisonLayers = ['cob2020', 'cob2024', 'ndvi2020', 'ndvi2024'];
+                
+                for (const layerId of comparisonLayers) {
+                    const checkbox = document.getElementById(layerId);
+                    if (checkbox && !checkbox.checked) {
+                        checkbox.checked = true;
+                        await toggleLayer(layerId);
+                    }
+                }
+                
+                // Cargar análisis temporal para comparación
+                await loadTemporalAnalysis('cobertura');
+                
+                updateComparisonStats();
+                
+            } catch (error) {
+                console.error('Error en modo comparación:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Función modificada para actualizar capas por año
+        async function updateLayersForYear(year) {
+            try {
+                showLoading();
+                
+                // Desactivar todas las capas temporales primero
+                const temporalLayers = Object.keys(dataLayers).filter(id => 
+                    id.includes('cob') || id.includes('ndvi') || id.includes('ndwi') || id.includes('ndoai')
+                );
+                
+                temporalLayers.forEach(layerId => {
+                    const checkbox = document.getElementById(layerId);
+                    if (checkbox && checkbox.checked) {
+                        checkbox.checked = false;
+                        if (dataLayers[layerId]) {
+                            map.removeLayer(dataLayers[layerId]);
+                        }
+                    }
+                });
+                
+                // Activar capas del año seleccionado
+                const yearLayers = Object.keys(dataLayers).filter(id => id.includes(year));
+                const availableYearLayers = [
+                    `cob${year}`, `ndvi${year}`, `ndwi${year}`, `ndoai${year}`
+                ].filter(id => document.getElementById(id));
+                
+                for (const layerId of availableYearLayers) {
+                    const checkbox = document.getElementById(layerId);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        await toggleLayer(layerId);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error actualizando capas por año:', error);
+            } finally {
+                hideLoading();
+                updateLayerCount();
+                updateDynamicLegend();
+            }
+        }
+        
+        // Llamar a inicialización cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar geoportal
+            initializeGeoportal();
+        });
+        
+        // Inicializar inmediatamente si el DOM ya está cargado
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeGeoportal);
+        } else {
+            initializeGeoportal();
+        }
         
         // Controles adicionales del mapa
         map.addControl(new L.Control.Scale());
