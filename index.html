@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geoportal: Erosión Regresiva del Río Coca</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c5530 0%, #3d7c47 100%);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 350px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 999;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .panel {
+            margin: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+            color: white;
+            padding: 12px 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-content {
+            padding: 15px;
+        }
+
+        .layer-control {
+            margin-bottom: 12px;
+        }
+
+        .layer-control label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+
+        .layer-control label:hover {
+            background: #f1f5f9;
+            border-color: #3182ce;
+        }
+
+        .layer-control input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #3182ce;
+        }
+
+        .year-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .year-btn {
+            padding: 6px 12px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .year-btn:hover {
+            border-color: #3182ce;
+            background: #f1f5f9;
+        }
+
+        .year-btn.active {
+            background: #3182ce;
+            color: white;
+            border-color: #3182ce;
+        }
+
+        .info-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3182ce;
+        }
+
+        .info-card h3 {
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .info-card p {
+            font-size: 13px;
+            color: #4a5568;
+            line-height: 1.4;
+        }
+
+        .analysis-tools {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tool-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: #3182ce;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .tool-btn:hover {
+            background: #2c5aa0;
+            transform: translateY(-1px);
+        }
+
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 15px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #3182ce;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #718096;
+            margin-top: 2px;
+        }
+
+        .collapse-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #4a5568;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .collapse-btn:hover {
+            background: white;
+            color: #2d3748;
+        }
+
+        .sidebar.collapsed {
+            width: 0;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .collapse-btn {
+            right: -45px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: absolute;
+                height: 100%;
+                z-index: 1001;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .year-selector {
+                gap: 4px;
+            }
+
+            .year-btn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-water"></i> Geoportal: Erosión Regresiva del Río Coca</h1>
+        <p>Análisis temporal de cambios ambientales en la cuenca del Río Coca - Ecuador</p>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <button class="collapse-btn" onclick="toggleSidebar()">
+                <i class="fas fa-chevron-left" id="collapseIcon"></i>
+            </button>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-layers"></i>
+                    Capas de Información
+                </div>
+                <div class="panel-content">
+                    <div class="layer-control">
+                        <label>
+                            <input type="checkbox" id="layer-aoi" checked>
+                            <i class="fas fa-map-marked-alt" style="color: #e53e3e;"></i>
+                            Área de Interés (AOI)
+                        </label>
+                    </div>
+                    <div class="layer-control">
+                        <label>
+                            <input type="checkbox" id="layer-sector" checked>
+                            <i class="fas fa-layer-group" style="color: #805ad5;"></i>
+                            Sectores de Estudio
+                        </label>
+                    </div>
+                    <div class="layer-control">
+                        <label>
+                            <input type="checkbox" id="layer-cob">
+                            <i class="fas fa-tree" style="color: #38a169;"></i>
+                            Cobertura del Suelo
+                        </label>
+                    </div>
+                    <div class="layer-control">
+                        <label>
+                            <input type="checkbox" id="layer-ndvi">
+                            <i class="fas fa-leaf" style="color: #48bb78;"></i>
+                            Índice de Vegetación (NDVI)
+                        </label>
+                    </div>
+                    <div class="layer-control">
+                        <label>
+                            <input type="checkbox" id="layer-ndwi">
+                            <i class="fas fa-tint" style="color: #4299e1;"></i>
+                            Índice de Agua (NDWI)
+                        </label>
+                    </div>
+                    <div class="layer-control">
+                        <label>
+                            <input type="checkbox" id="layer-ndoai">
+                            <i class="fas fa-chart-line" style="color: #ed8936;"></i>
+                            Índice NDOAI
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-calendar-alt"></i>
+                    Análisis Temporal
+                </div>
+                <div class="panel-content">
+                    <div class="year-selector">
+                        <button class="year-btn active" data-year="2020">2020</button>
+                        <button class="year-btn" data-year="2021">2021</button>
+                        <button class="year-btn" data-year="2022">2022</button>
+                        <button class="year-btn" data-year="2023">2023</button>
+                        <button class="year-btn" data-year="2024">2024</button>
+                    </div>
+                    
+                    <div class="analysis-tools">
+                        <button class="tool-btn" onclick="compareYears()">
+                            <i class="fas fa-not-equal"></i>
+                            Comparar
+                        </button>
+                        <button class="tool-btn" onclick="generateReport()">
+                            <i class="fas fa-file-alt"></i>
+                            Reporte
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-chart-bar"></i>
+                    Estadísticas
+                </div>
+                <div class="panel-content">
+                    <div class="stats-container">
+                        <div class="stat-item">
+                            <div class="stat-value" id="area-total">2,450</div>
+                            <div class="stat-label">Área Total (ha)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="area-erosion">145</div>
+                            <div class="stat-label">Erosión Activa (ha)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="veg-loss">-12.5%</div>
+                            <div class="stat-label">Pérdida Vegetación</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="water-change">+8.2%</div>
+                            <div class="stat-label">Cambio Hídrico</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-palette"></i>
+                    Leyenda
+                </div>
+                <div class="panel-content">
+                    <div class="legend" id="legend-ndvi">
+                        <h4 style="margin-bottom: 8px; font-size: 12px;">NDVI (Vegetación)</h4>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #d73027;"></div>
+                            <span>Muy Baja (0.0-0.2)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #fdae61;"></div>
+                            <span>Baja (0.2-0.4)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #fee08b;"></div>
+                            <span>Media (0.4-0.6)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #abd9e9;"></div>
+                            <span>Alta (0.6-0.8)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #2166ac;"></div>
+                            <span>Muy Alta (0.8-1.0)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="legend" id="legend-ndwi" style="display: none;">
+                        <h4 style="margin-bottom: 8px; font-size: 12px;">NDWI (Agua)</h4>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #8B4513;"></div>
+                            <span>Suelo Seco (-1.0--0.3)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #DEB887;"></div>
+                            <span>Suelo Húmedo (-0.3-0.0)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #87CEEB;"></div>
+                            <span>Agua Turbia (0.0-0.3)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #4682B4;"></div>
+                            <span>Agua Clara (0.3-0.7)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #191970;"></div>
+                            <span>Agua Profunda (0.7-1.0)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-info-circle"></i>
+                    Información
+                </div>
+                <div class="panel-content">
+                    <div class="info-card">
+                        <h3>Erosión Regresiva</h3>
+                        <p>Proceso de retroceso progresivo del cauce del río que genera pérdida de suelo y vegetación ribereña.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Río Coca</h3>
+                        <p>Importante afluente del río Napo en la Amazonía ecuatoriana, afectado por actividades antropogénicas y cambios climáticos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner fa-spin"></i> Cargando datos...
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // Inicializar mapa
+        const map = L.map('map').setView([-0.7, -77.3], 10);
+
+        // Capas base
+        const baseLayers = {
+            'Satelital': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri'
+            }),
+            'Topográfico': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap'
+            }),
+            'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            })
+        };
+
+        // Agregar capa base por defecto
+        baseLayers['Satelital'].addTo(map);
+
+        // Control de capas base
+        L.control.layers(baseLayers).addTo(map);
+
+        // Variables para almacenar capas
+        let layers = {};
+        let currentYear = 2020;
+
+        // Datos simulados para el Río Coca
+        const mockData = {
+            aoi: {
+                type: "Feature",
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [[
+                        [-77.4, -0.6], [-77.2, -0.6], [-77.2, -0.8], [-77.4, -0.8], [-77.4, -0.6]
+                    ]]
+                },
+                properties: {
+                    name: "Área de Estudio Río Coca",
+                    area: 2450,
+                    observa: "Zona de erosión regresiva activa"
+                }
+            },
+            sectors: [
+                {
+                    type: "Feature",
+                    geometry: {
+                        type: "Polygon",
+                        coordinates: [[
+                            [-77.35, -0.65], [-77.25, -0.65], [-77.25, -0.75], [-77.35, -0.75], [-77.35, -0.65]
+                        ]]
+                    },
+                    properties: { name: "Sector Alto", id: 1 }
+                },
+                {
+                    type: "Feature",
+                    geometry: {
+                        type: "Polygon",
+                        coordinates: [[
+                            [-77.25, -0.65], [-77.15, -0.65], [-77.15, -0.75], [-77.25, -0.75], [-77.25, -0.65]
+                        ]]
+                    },
+                    properties: { name: "Sector Medio", id: 2 }
+                }
+            ]
+        };
+
+        // Inicializar capas
+        function initializeLayers() {
+            // Capa AOI
+            layers.aoi = L.geoJSON(mockData.aoi, {
+                style: {
+                    color: '#e53e3e',
+                    weight: 3,
+                    fillOpacity: 0.1
+                }
+            }).bindPopup(`
+                <strong>${mockData.aoi.properties.name}</strong><br>
+                Área: ${mockData.aoi.properties.area} ha<br>
+                Observación: ${mockData.aoi.properties.observa}
+            `);
+
+            // Capa Sectores
+            layers.sector = L.geoJSON(mockData.sectors, {
+                style: {
+                    color: '#805ad5',
+                    weight: 2,
+                    fillOpacity: 0.2
+                }
+            }).bindPopup(layer => `
+                <strong>${layer.feature.properties.name}</strong><br>
+                ID: ${layer.feature.properties.id}
+            `);
+
+            // Agregar capas iniciales al mapa
+            layers.aoi.addTo(map);
+            layers.sector.addTo(map);
+        }
+
+        // Simular carga de datos de base de datos
+        function loadLayerData(layerType, year) {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+
+            // Simular consulta a base de datos
+            setTimeout(() => {
+                // Aquí iría la conexión real a Supabase
+                // const { data, error } = await supabase.from(`${layerType}_${year}_XX`).select('*');
+                
+                createMockLayer(layerType, year);
+                loading.style.display = 'none';
+            }, 1000);
+        }
+
+        // Crear capas simuladas
+        function createMockLayer(layerType, year) {
+            const colors = {
+                'ndvi': ['#d73027', '#fdae61', '#fee08b', '#abd9e9', '#2166ac'],
+                'ndwi': ['#8B4513', '#DEB887', '#87CEEB', '#4682B4', '#191970'],
+                'cob': ['#8B4513', '#228B22', '#32CD32', '#FFD700', '#FF6347'],
+                'ndoai': ['#800080', '#9932CC', '#BA55D3', '#DA70D6', '#EE82EE']
+            };
+
+            if (layers[layerType]) {
+                map.removeLayer(layers[layerType]);
+            }
+
+            // Crear polígonos simulados
+            const features = [];
+            for (let i = 0; i < 5; i++) {
+                const lat = -0.7 + (Math.random() - 0.5) * 0.2;
+                const lng = -77.3 + (Math.random() - 0.5) * 0.2;
+                const size = 0.02;
+                
+                features.push({
+                    type: "Feature",
+                    geometry: {
+                        type: "Polygon",
+                        coordinates: [[
+                            [lng, lat], [lng + size, lat], [lng + size, lat + size], [lng, lat + size], [lng, lat]
+                        ]]
+                    },
+                    properties: {
+                        dn: Math.floor(Math.random() * 255),
+                        clase: `Clase ${i + 1}`,
+                        year: year
+                    }
+                });
+            }
+
+            layers[layerType] = L.geoJSON(features, {
+                style: feature => ({
+                    color: colors[layerType][Math.floor(Math.random() * colors[layerType].length)],
+                    weight: 1,
+                    fillOpacity: 0.7
+                })
+            }).bindPopup(layer => `
+                <strong>${layerType.toUpperCase()} - ${year}</strong><br>
+                DN: ${layer.feature.properties.dn}<br>
+                Clase: ${layer.feature.properties.clase}
+            `);
+        }
+
+        // Manejar controles de capas
+        document.querySelectorAll('.layer-control input').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const layerType = this.id.replace('layer-', '');
+                
+                if (this.checked) {
+                    if (layerType === 'aoi' || layerType === 'sector') {
+                        if (layers[layerType]) {
+                            layers[layerType].addTo(map);
+                        }
+                    } else {
+                        loadLayerData(layerType, currentYear);
+                        if (layers[layerType]) {
+                            layers[layerType].addTo(map);
+                        }
+                    }
+                } else {
+                    if (layers[layerType]) {
+                        map.removeLayer(layers[layerType]);
+                    }
+                }
+                
+                updateLegend(layerType, this.checked);
+            });
+        });
+
+        // Manejar selección de años
+        document.querySelectorAll('.year-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentYear = parseInt(this.dataset.year);
+                
+                // Recargar capas activas
+                document.querySelectorAll('.layer-control input:checked').forEach(checkbox => {
+                    const layerType = checkbox.id.replace('layer-', '');
+                    if (layerType !== 'aoi' && layerType !== 'sector') {
+                        loadLayerData(layerType, currentYear);
+                    }
+                });
+                
+                updateStats(currentYear);
+            });
+        });
+
+        // Actualizar leyenda
+        function updateLegend(layerType, show) {
+            const legends = document.querySelectorAll('.legend');
+            legends.forEach(legend => legend.style.display = 'none');
+            
+            if (show && (layerType === 'ndvi' || layerType === 'ndwi')) {
+                const legendElement = document.getElementById(`legend-${layerType}`);
+                if (legendElement) {
+                    legendElement.style.display = 'block';
+                }
+            }
+        }
+
+        // Actualizar estadísticas
+        function updateStats(year) {
+            const stats = {
+                2020: { area: 2450, erosion: 145, vegLoss: -12.5, waterChange: 8.2 },
+                2021: { area: 2450, erosion: 167, vegLoss: -15.2, waterChange: 10.1 },
+                2022: { area: 2450, erosion: 189, vegLoss: -18.7, waterChange: 12.3 },
+                2023: { area: 2450, erosion: 234, vegLoss: -22.1, waterChange: 15.8 },
+                2024: { area: 2450, erosion: 278, vegLoss: -26.4, waterChange: 18.9 }
+            };
+            
+            const yearStats = stats[year];
+            document.getElementById('area-total').textContent = yearStats.area.toLocaleString();
+            document.getElementById('area-erosion').textContent = yearStats.erosion.toLocaleString();
+            document.getElementById('veg-loss').textContent = yearStats.vegLoss + '%';
+            document.getElementById('water-change').textContent = '+' + yearStats.waterChange + '%';
+        }
+
+        // Funciones de análisis
+        function compareYears() {
+            alert('Función de comparación temporal - Integrar con datos reales de Supabase');
+        }
+
+        function generateReport() {
+            alert('Generación de reporte - Integrar con datos reales y exportar PDF');
+        }
+
+        // Control de sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const icon = document.getElementById('collapseIcon');
+            
+            sidebar.classList.toggle('collapsed');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                icon.className = 'fas fa-chevron-right';
+            } else {
+                icon.className = 'fas fa-chevron-left';
+            }
+        }
+
+        // Inicializar aplicación
+        initializeLayers();
+        updateStats(currentYear);
+        
+        // Ajustar vista del mapa al AOI
+        map.fitBounds(layers.aoi.getBounds());
+    </script>
+</body>
+</html>
